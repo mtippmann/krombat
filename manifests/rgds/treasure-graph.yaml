@@ -2,8 +2,8 @@ apiVersion: kro.run/v1alpha1
 kind: ResourceGraphDefinition
 metadata:
   name: treasure-graph
-  annotations:
-    argocd.argoproj.io/sync-wave: "-1"
+  labels:
+    app.kubernetes.io/part-of: krombat
 spec:
   schema:
     apiVersion: v1alpha1
@@ -11,37 +11,34 @@ spec:
     group: game.k8s.example
     spec:
       dungeonName: string | required=true
-      opened: integer | default=0
+      opened: integer | default=0 minimum=0 maximum=1
     status:
-      treasureState: "${treasureState.data.state}"
-      loot: "${treasureState.data.loot}"
-
+      treasureState: ${treasureState.data.state}
   resources:
     - id: treasureState
       template:
         apiVersion: v1
         kind: ConfigMap
         metadata:
-          name: "${schema.spec.dungeonName + '-treasure-state'}"
+          name: ${schema.metadata.name + '-state'}
           namespace: ${schema.metadata.namespace}
           labels:
             game.k8s.example/dungeon: ${schema.spec.dungeonName}
             game.k8s.example/entity: treasure
         data:
           state: "${schema.spec.opened == 1 ? 'opened' : 'unopened'}"
-          loot: "${schema.spec.opened == 1 ? 'Key: ' + schema.spec.dungeonName + '-' + string(size(schema.spec.dungeonName) * 7) + '-RUNE' : ''}"
-
     - id: treasureSecret
       includeWhen:
-        - "${schema.spec.opened == 1}"
+        - ${schema.spec.opened == 1}
       template:
         apiVersion: v1
         kind: Secret
         metadata:
-          name: "${schema.spec.dungeonName + '-treasure'}"
+          name: ${schema.metadata.name}
           namespace: ${schema.metadata.namespace}
           labels:
             game.k8s.example/dungeon: ${schema.spec.dungeonName}
             game.k8s.example/entity: treasure
+        type: Opaque
         stringData:
-          loot: "${'Key: ' + schema.spec.dungeonName + '-' + string(size(schema.spec.dungeonName) * 7) + '-RUNE'}"
+          reward: ${'Victory trophy for ' + schema.spec.dungeonName}

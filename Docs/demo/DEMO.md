@@ -1,121 +1,102 @@
-# Krombat — 5-Minute Conference Demo Script
+# Team presentation: a game as a resource graph
 
-**Target audience:** Kubernetes / platform engineering practitioners at a meetup, KubeCon booth, or conference lightning talk.
+## Prepare
 
-**Setup:** Browser open to `https://learn-kro.eks.aws.dev`. No local tooling required.
+```bash
+bash scripts/local.sh build
+bash scripts/local.sh deploy
+bash tests/run.sh
+```
 
-**Timing:** Each beat is 60 seconds max. Total: ~5 minutes.
+Open `http://krombat.test` and log in with **Enter local demo**.
+Use three monsters, easy difficulty and the name `team-demo`.
+If that run already exists, delete it through the UI and recreate it.
+Alternatively apply the fully initialized example:
 
----
+```bash
+kubectl --context minikube apply -f Docs/demo/dungeon-demo.yaml
+```
 
-## Pre-demo checklist (do this 5 min before going on stage)
+Do not reapply that example over a live run: it resets desired HP fields.
 
-1. Open `https://learn-kro.eks.aws.dev` in a browser tab and sign in with GitHub.
-2. Delete any leftover dungeons from prior runs so the UI is clean.
-3. Have a dungeon open and the K8s Logs tab visible so the audience can see reconcile events immediately.
-4. Increase browser font size to 125–150% for projector visibility.
-5. Confirm the cluster is responding: create a test dungeon named `demo-test`, see it load, then delete it.
+## Set up your inspection tool
 
----
+```bash
+k9s --context minikube -n rpg-demo
+```
 
-## Minute 1 — The pitch
+In k9s use `:dungeons`, `:monsters`, `:bosses`, `:loots`, `:configmaps`,
+and `:secrets`; inspect YAML and events. Dungeon printer columns show living
+monsters, boss state, phase, hero HP, and readiness.
 
-**[Show: dungeon creation screen at `https://learn-kro.eks.aws.dev`]**
+For Radar, use a **minikube-only kubeconfig** so no shared context can be switched:
 
-> "This is a turn-based dungeon RPG. But unlike any game you've played, its entire state lives in a single Kubernetes Custom Resource — on a real EKS cluster running in your browser right now."
+```bash
+umask 077
+RADAR_CONFIG=$(mktemp)
+kubectl --context minikube config view --minify --flatten --raw > "$RADAR_CONFIG"
+radar --kubeconfig "$RADAR_CONFIG" --listen-address 127.0.0.1
+# After stopping Radar:
+rm "$RADAR_CONFIG"
+```
 
-> "No database. No Redis. No game server. The game engine is kro — the Kubernetes Resource Orchestrator — running CEL expressions on a Kubernetes CR."
+The temporary file contains cluster credentials; never print or commit it.
+Verified with Radar v1.16.0: open **Resources**, expand **Example Game**, choose
+**Dungeon**, and click `team-demo`. The list shows the custom Monsters/Boss/Phase/
+HeroHP/Ready columns; the detail drawer shows live status, conditions, spec.game,
+labels, ApplySet annotations and YAML. The direct list path is
+`/resources/dungeons?apiGroup=game.k8s.example`.
 
-Open the game at `https://learn-kro.eks.aws.dev`. Click **New Dungeon**, fill in the name `demo-dungeon-kubecon-2026`, select Warrior + Normal, click **Create Dungeon**. The dungeon loads.
+Radar's custom-resource views can inspect these objects. Its automatic topology
+may not infer every arbitrary CR relationship: upstream kro uses ApplySet labels
+rather than default ownerReferences. Use the game's live resource inspector,
+Radar's resource details and k9s/YAML as reliable complementary views.
 
-> "I just applied a real CR to a live EKS cluster. kro is now watching it."
+## Walkthrough
 
-Open the **K8s Logs tab** in the event log panel. You can see the creation events flowing in.
+1. **A new Kubernetes API.** Show `dungeon-graph`, its schema and a generated
+   Dungeon CRD. Explain that schema validation, RBAC, status and printer columns
+   are native Kubernetes facilities.
+2. **One input, many resources.** Create the dungeon through the UI and inspect
+   Hero, three Monsters, Boss, Treasure and ConfigMaps. Show `forEach` and the
+   composition of six independent RGDs. Compare to an application stack spawning
+   databases, services and monitoring.
+3. **A turn is a desired-state update.** Attack a monster. Go writes spec.game;
+   kro updates the Monster CR and ConfigMap. The UI inspector shows the real
+   objects. Explain asynchronous convergence rather than inventing a synchronous
+   Kubernetes transaction across all children.
+4. **Conditional resources.** Kill a monster and inspect its newly created Loot
+   CR, ConfigMap and Secret. Show `includeWhen`. These are trophies, not an
+   equipment subsystem. Compare to optional backups or add-on infrastructure.
+5. **Derived state and aggregation.** Clear monsters, observe the boss becoming
+   ready, then attack until phase2 and phase3. Show the 50%/25% CEL expressions.
+   Explain the distinction between gameplay readiness and controller readiness.
+6. **Treasure.** Defeat the boss, open the chest and inspect the conditional
+   Treasure Secret. Evaluate `schema.spec.game.bossHP == 0` in the CEL playground.
+7. **Drift repair.** Edit `team-demo-hero` ConfigMap hp to `9999` and observe kro
+   restore the real value. Delete that same ConfigMap and watch it return with
+   a new UID. Do not change any unrelated resource.
+8. **Lifecycle.** Delete the dungeon through the UI and observe children vanish.
+   Explain ApplySet inventory, the `kro.run/finalizer` and ordered cleanup.
 
-> "Here are the Kubernetes events as kro reconciles the Dungeon CR in real time. kro created 16 resources from that one CR: a Namespace, a Hero CR, Monster CRs, a Boss CR, a Treasure CR, and state nodes that run the game engine. All from a single RGD — a ResourceGraphDefinition."
+Useful read-only commands:
 
----
+```bash
+kubectl --context minikube get rgd -l app.kubernetes.io/part-of=krombat
+kubectl --context minikube get crd dungeons.game.k8s.example -o yaml
+kubectl --context minikube -n rpg-demo get dungeon team-demo -o yaml
+kubectl --context minikube -n rpg-demo get hero,monster,boss,treasure,loot,cm,secret \
+  -l game.k8s.example/dungeon=team-demo
+kubectl --context minikube -n rpg-demo get cm team-demo-hero -o yaml
+```
 
-## Minute 2 — The CR
+## Be explicit about the limits
 
-**[Open: kro graph panel (graph icon in event log)]**
+This is Kubernetes orchestration applied to a fun domain, not a recommendation
+to use Kubernetes as a high-throughput game database. Go calculates turn damage
+and validates actions; stock kro projects desired resources and evaluates CEL
+for derived state. The original game's custom write-back engine, AWS deployment
+and additional gameplay are not present.
 
-> "This is the live resource graph — the same graph kro maintains in memory. Every node here is a resource kro created from the dungeon-graph RGD."
-
-**[Click a node — e.g., combatResolve]**
-
-> "Each node shows the CEL expression that defines it. This is the actual CEL that runs on every reconcile. kro evaluates it, gets a value, and writes it to `status.game` on the Dungeon CR."
-
-> "Look at the Reconcile Stream tab — `status.game.heroHP`, `status.game.monsterHP`, `status.game.bossHP`. This is not a database row. This is Kubernetes. kro owns it."
-
----
-
-## Minute 3 — The reconcile
-
-**[Switch to: dungeon arena. Click Attack on a monster]**
-
-> "I just attacked. Watch the K8s Logs tab."
-
-**[Open: event log → K8s Logs tab]**
-
-> "You can see the Attack CR being created, kro reconciling, and the damage written to `status.game.monsterHP`. The monster's HP dropped. All of that happened via a Kubernetes reconcile — no custom controller, no game server socket."
-
-> "The CEL expression that computed the damage is right here in the log annotation: `monsterHP[i] = monsterHP[i] - heroDamage`. That runs inside kro's combatResolve state node."
-
----
-
-## Minute 4 — The reconcile stream
-
-**[Open: event log → Reconcile Stream tab]**
-
-> "Every time kro processes a reconcile event, you see the exact field diffs right here. Old value → new value. Which state node fired. Which CEL expression computed it."
-
-**[Click Attack on a monster, point to stream]**
-
-> "Watch `status.game.monsterHP[0]` change. That's kro writing the result of `monsterHP[i] - heroDamage` to `status.game`. No controller code — just CEL in a YAML file."
-
-> "This is the ResourceGraphDefinition pattern: declare what to create, declare how to compute it in CEL, and let kro wire the whole thing together. No imperative code."
-
----
-
-## Minute 5 — The payoff
-
-**[Kill all monsters, then kill the boss. Show victory screen.]**
-
-> "Boss defeated. kro auto-opened the Treasure CR, unlocked the door — and if you want to go deeper, Room 2 is waiting with a harder boss."
-
-**[Show: victory banner with Run Card]**
-
-> "Every win generates a shareable Run Card — an SVG served directly by the backend. The card shows your hero class, difficulty, turn count, and the kro concepts you unlocked. That URL is shareable on Twitter, Slack, anywhere."
-
-> "You just played a turn-based dungeon RPG whose entire game engine is kro CEL running on Kubernetes. No game logic in the backend. No game logic in the frontend. All of it lives in this RGD — `dungeon-graph.yaml` — 400 lines of YAML with CEL expressions."
-
-**[Show: QR code or type the URL]**
-
-> "Scan this or go to `learn-kro.eks.aws.dev` — it's live, it's free, it's open source. The repo is `github.com/pnz1990/krombat`."
-
-**[Show: kro GitHub]**
-
-> "And kro itself is at `github.com/kubernetes-sigs/kro`. If you're building platform tooling on Kubernetes, kro is worth 30 minutes of your time."
-
----
-
-## Fallback instructions (if the live cluster is slow)
-
-- **Attack response is slow (>5s):** The EKS cluster may be cold-starting a node. Say: "kro is reconciling — this is the real thing, not a mock." Wait up to 15 seconds. It will come through.
-- **Dungeon creation fails:** Try a different dungeon name. If the cluster is down, use a pre-recorded screen capture of a full run (keep one at `/tmp/krombat-demo-recording.mp4`).
-- **K8s Logs tab empty:** Refresh the event log by clicking another entity in the arena. The WebSocket sometimes needs a nudge after a long idle.
-- **Graph panel blank:** Click the graph icon twice (toggle off/on). Nodes render after the first reconcile event.
-
----
-
-## Audience call to action
-
-1. **Scan / type:** `https://learn-kro.eks.aws.dev` — sign in with GitHub and play (free, no setup required)
-2. **Star:** `github.com/kubernetes-sigs/kro`
-3. **Read:** `kro.run/docs` — 5-minute quickstart
-4. **Watch:** The kro panel as you play — every concept has a glossary entry
-
----
-
-*Script version: 2026-03 | Issue #458 | Repo: pnz1990/krombat*
+The shared local identity and unencrypted HTTP are intentional for this machine.
+Do not present this as a production authentication design.

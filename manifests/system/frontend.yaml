@@ -3,8 +3,10 @@ kind: Deployment
 metadata:
   name: rpg-frontend
   namespace: rpg-system
+  labels:
+    app.kubernetes.io/part-of: krombat
 spec:
-  replicas: 4
+  replicas: 1
   selector:
     matchLabels:
       app: rpg-frontend
@@ -13,67 +15,54 @@ spec:
       labels:
         app: rpg-frontend
     spec:
-      topologySpreadConstraints:
-        # #471: 4 replicas, maxSkew:1 across 2 AZs — steady state is [2,2]
-        # maxSkew:0 causes pending pods during rolling update (scheduler sees 3 zones)
-        - maxSkew: 1
-          topologyKey: topology.kubernetes.io/zone
-          whenUnsatisfiable: DoNotSchedule
-          labelSelector:
-            matchLabels:
-              app: rpg-frontend
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
       containers:
         - name: frontend
-          # #415: nginxinc/nginx-unprivileged runs as UID 101 (non-root).
-          # Listens on port 8080 instead of privileged 80.
-          image: 319279230668.dkr.ecr.us-west-2.amazonaws.com/krombat/frontend:cffbed958fbaf4d50f4786026ac73d81f9c091d3
+          image: krombat-frontend:local
+          imagePullPolicy: Never
           ports:
             - containerPort: 3000
           securityContext:
-            runAsNonRoot: true
             runAsUser: 101
             runAsGroup: 101
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             capabilities:
-              drop: ["ALL"]
+              drop: [ALL]
           volumeMounts:
-            - name: nginx-cache
+            - name: cache
               mountPath: /var/cache/nginx
-            - name: nginx-run
+            - name: run
               mountPath: /var/run
-            - name: nginx-tmp
+            - name: tmp
               mountPath: /tmp
           readinessProbe:
             httpGet:
               path: /
               port: 3000
-            initialDelaySeconds: 2
-            periodSeconds: 5
+            periodSeconds: 3
           livenessProbe:
             httpGet:
               path: /
               port: 3000
             initialDelaySeconds: 10
-            periodSeconds: 15
-            failureThreshold: 3
           resources:
             requests:
-              memory: "128Mi"
-              cpu: "100m"
+              memory: 32Mi
+              cpu: 25m
             limits:
-              memory: "256Mi"
-              cpu: "500m"
+              memory: 128Mi
+              cpu: 500m
       volumes:
-        - name: nginx-cache
+        - name: cache
           emptyDir: {}
-        - name: nginx-run
+        - name: run
           emptyDir: {}
-        - name: nginx-tmp
+        - name: tmp
           emptyDir: {}
 ---
 apiVersion: v1

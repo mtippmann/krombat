@@ -2,8 +2,8 @@ apiVersion: kro.run/v1alpha1
 kind: ResourceGraphDefinition
 metadata:
   name: loot-graph
-  annotations:
-    argocd.argoproj.io/sync-wave: "-1"
+  labels:
+    app.kubernetes.io/part-of: krombat
 spec:
   schema:
     apiVersion: v1alpha1
@@ -11,42 +11,34 @@ spec:
     group: game.k8s.example
     spec:
       dungeonName: string | required=true
-      itemType: string | required=true
-      rarity: string | default="common"
-      stat: integer | default=0
-      dropped: boolean | default=false
+      rarity: string | default="common" enum=common,rare,epic
     status:
-      itemName: "${lootSecret.metadata.name}"
-      description: "${lootInfo.data.description}"
-
+      description: ${lootInfo.data.description}
+      itemName: ${lootSecret.metadata.name}
   resources:
     - id: lootInfo
       template:
         apiVersion: v1
         kind: ConfigMap
         metadata:
-          name: "${schema.metadata.name}-info"
+          name: ${schema.metadata.name + '-info'}
           namespace: ${schema.metadata.namespace}
           labels:
             game.k8s.example/dungeon: ${schema.spec.dungeonName}
-            game.k8s.example/entity: loot-info
+            game.k8s.example/entity: loot
         data:
-          description: "${schema.spec.itemType == 'weapon' ? 'A ' + schema.spec.rarity + ' weapon (+' + string(schema.spec.stat) + ' damage, 3 uses)' : schema.spec.itemType == 'armor' ? 'A ' + schema.spec.rarity + ' armor (+' + string(schema.spec.stat) + '% defense)' : schema.spec.itemType == 'shield' ? 'A ' + schema.spec.rarity + ' shield (' + string(schema.spec.stat) + '% block chance)' : schema.spec.itemType == 'hppotion' ? 'A ' + schema.spec.rarity + ' HP potion (restores ' + string(schema.spec.stat) + ' HP)' : schema.spec.itemType == 'manapotion' ? 'A ' + schema.spec.rarity + ' mana potion (restores ' + string(schema.spec.stat) + ' mana)' : schema.spec.itemType == 'helmet' ? 'A ' + schema.spec.rarity + ' helmet (+' + string(schema.spec.stat) + '% crit chance)' : schema.spec.itemType == 'pants' ? 'A ' + schema.spec.rarity + ' pants (+' + string(schema.spec.stat) + '% dodge chance)' : schema.spec.itemType == 'boots' ? 'A ' + schema.spec.rarity + ' boots (+' + string(schema.spec.stat) + '% status resist)' : schema.spec.itemType == 'ring' ? 'A ' + schema.spec.rarity + ' ring (+' + string(schema.spec.stat) + ' HP regen per round)' : 'A ' + schema.spec.rarity + ' amulet (+' + string(schema.spec.stat) + '% damage boost)'}"
-
+          description: ${'A ' + schema.spec.rarity + ' trophy (display only)'}
     - id: lootSecret
       template:
         apiVersion: v1
         kind: Secret
         metadata:
-          name: "${schema.metadata.name}"
+          name: ${schema.metadata.name}
           namespace: ${schema.metadata.namespace}
           labels:
             game.k8s.example/dungeon: ${schema.spec.dungeonName}
             game.k8s.example/entity: loot
-            game.k8s.example/item-type: ${schema.spec.itemType}
-            game.k8s.example/rarity: ${schema.spec.rarity}
+        type: Opaque
         stringData:
-          itemType: ${schema.spec.itemType}
           rarity: ${schema.spec.rarity}
-          stat: "${string(schema.spec.stat)}"
-          description: "${schema.spec.itemType == 'weapon' ? 'A ' + schema.spec.rarity + ' weapon (+' + string(schema.spec.stat) + ' damage, 3 uses)' : schema.spec.itemType == 'armor' ? 'A ' + schema.spec.rarity + ' armor (+' + string(schema.spec.stat) + '% defense)' : schema.spec.itemType == 'shield' ? 'A ' + schema.spec.rarity + ' shield (' + string(schema.spec.stat) + '% block chance)' : schema.spec.itemType == 'hppotion' ? 'A ' + schema.spec.rarity + ' HP potion (restores ' + string(schema.spec.stat) + ' HP)' : schema.spec.itemType == 'manapotion' ? 'A ' + schema.spec.rarity + ' mana potion (restores ' + string(schema.spec.stat) + ' mana)' : schema.spec.itemType == 'helmet' ? 'A ' + schema.spec.rarity + ' helmet (+' + string(schema.spec.stat) + '% crit chance)' : schema.spec.itemType == 'pants' ? 'A ' + schema.spec.rarity + ' pants (+' + string(schema.spec.stat) + '% dodge chance)' : schema.spec.itemType == 'boots' ? 'A ' + schema.spec.rarity + ' boots (+' + string(schema.spec.stat) + '% status resist)' : schema.spec.itemType == 'ring' ? 'A ' + schema.spec.rarity + ' ring (+' + string(schema.spec.stat) + ' HP regen per round)' : 'A ' + schema.spec.rarity + ' amulet (+' + string(schema.spec.stat) + '% damage boost)'}"
+          trophy: ${random.seededString(8, schema.metadata.name)}

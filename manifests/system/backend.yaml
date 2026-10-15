@@ -3,8 +3,10 @@ kind: Deployment
 metadata:
   name: rpg-backend
   namespace: rpg-system
+  labels:
+    app.kubernetes.io/part-of: krombat
 spec:
-  replicas: 4
+  replicas: 1
   selector:
     matchLabels:
       app: rpg-backend
@@ -14,67 +16,46 @@ spec:
         app: rpg-backend
     spec:
       serviceAccountName: rpg-backend-sa
-      topologySpreadConstraints:
-        # #471: 4 replicas, maxSkew:1 across 2 AZs — steady state is [2,2]
-        # maxSkew:0 causes pending pods during rolling update (scheduler sees 3 zones)
-        - maxSkew: 1
-          topologyKey: topology.kubernetes.io/zone
-          whenUnsatisfiable: DoNotSchedule
-          labelSelector:
-            matchLabels:
-              app: rpg-backend
       securityContext:
         runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
       containers:
         - name: backend
-          image: 319279230668.dkr.ecr.us-west-2.amazonaws.com/krombat/backend:cffbed958fbaf4d50f4786026ac73d81f9c091d3
+          image: krombat-backend:local
+          imagePullPolicy: Never
           ports:
             - containerPort: 8080
-            - containerPort: 9090
-              name: metrics
           securityContext:
-            runAsNonRoot: true
             runAsUser: 65532
             runAsGroup: 65532
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             capabilities:
-              drop: ["ALL"]
+              drop: [ALL]
           env:
-            - name: GITHUB_CALLBACK_URL
-              value: "https://learn-kro.eks.aws.dev/api/v1/auth/callback"
-            - name: ALLOWED_ORIGINS
-              value: "https://learn-kro.eks.aws.dev"
-            - name: MAX_DUNGEONS_PER_USER
-              value: "50"
-          envFrom:
-            - secretRef:
-                name: krombat-github-oauth
-                # #418: SESSION_SECRET must be present; pod will fail-fast in main.go if absent
-            - secretRef:
-                name: krombat-test-auth
-                optional: true   # pod still starts without the secret; test bypass disabled if absent
+            - name: SESSION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: krombat-session
+                  key: SESSION_SECRET
           readinessProbe:
             httpGet:
               path: /healthz
               port: 8080
-            initialDelaySeconds: 2
-            periodSeconds: 5
+            periodSeconds: 3
           livenessProbe:
             httpGet:
               path: /healthz
               port: 8080
-            initialDelaySeconds: 5
-            periodSeconds: 10
+            initialDelaySeconds: 10
           resources:
             requests:
-              memory: "128Mi"
-              cpu: "100m"
+              memory: 64Mi
+              cpu: 50m
             limits:
-              memory: "256Mi"
-              cpu: "500m"
+              memory: 256Mi
+              cpu: "1"
 ---
 apiVersion: v1
 kind: Service
@@ -85,10 +66,5 @@ spec:
   selector:
     app: rpg-backend
   ports:
-    - name: http
-      port: 8080
+    - port: 8080
       targetPort: 8080
-    # #416: metrics port — internal only, not routed through ALB
-    - name: metrics
-      port: 9090
-      targetPort: 9090

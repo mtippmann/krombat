@@ -1,5 +1,0 @@
-# Copy to terraform.tfvars and fill in your values.
-# terraform.tfvars is gitignored — never commit it.
-
-aws_profile  = "<AWS_ACCOUNT_ID>-Admin"
-state_bucket = "krombat-terraform-state-<AWS_ACCOUNT_ID>"

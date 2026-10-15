@@ -1,11 +1,11 @@
 {
   "name": "krombat-tests",
   "version": "1.0.0",
-  "description": "E2E tests for Kubernetes RPG",
+  "description": "Containerized browser journeys for the local vanilla kro demo",
   "scripts": {
-    "test:e2e": "node tests/e2e/smoke-test.js"
+    "test:e2e": "bash tests/e2e/run.sh"
   },
   "devDependencies": {
-    "playwright": "^1.40.0"
+    "playwright": "1.58.2"
   }
 }

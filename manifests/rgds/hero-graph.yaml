@@ -2,8 +2,8 @@ apiVersion: kro.run/v1alpha1
 kind: ResourceGraphDefinition
 metadata:
   name: hero-graph
-  annotations:
-    argocd.argoproj.io/sync-wave: "-1"
+  labels:
+    app.kubernetes.io/part-of: krombat
 spec:
   schema:
     apiVersion: v1alpha1
@@ -11,38 +11,23 @@ spec:
     group: game.k8s.example
     spec:
       dungeonName: string | required=true
-      hp: integer | default=100
-      difficulty: string | default="normal"
-      heroClass: string | default="warrior" enum=warrior,mage,rogue
-      mana: integer | default=0
+      hp: integer | default=200 minimum=0 maximum=200
     status:
-      entityState: "${heroState.data.entityState}"
-      hp: "${heroState.data.hp}"
-      heroClass: "${heroState.data.heroClass}"
-      maxHP: "${heroState.data.maxHP}"
-      damageModifier: "${heroState.data.damageModifier}"
-      defense: "${heroState.data.defense}"
-      dodgeChance: "${heroState.data.dodgeChance}"
-      mana: "${heroState.data.mana}"
-
+      entityState: ${heroState.data.entityState}
+      maxHP: ${heroState.data.maxHP}
+      hp: ${heroState.data.hp}
   resources:
     - id: heroState
       template:
         apiVersion: v1
         kind: ConfigMap
         metadata:
-          name: "${schema.spec.dungeonName + '-hero'}"
+          name: ${schema.metadata.name}
           namespace: ${schema.metadata.namespace}
           labels:
             game.k8s.example/dungeon: ${schema.spec.dungeonName}
             game.k8s.example/entity: hero
-            game.k8s.example/class: ${schema.spec.heroClass}
         data:
           entityState: "${schema.spec.hp > 0 ? 'alive' : 'defeated'}"
-          hp: "${string(schema.spec.hp)}"
-          heroClass: ${schema.spec.heroClass}
-          maxHP: "${schema.spec.heroClass == 'warrior' ? '200' : schema.spec.heroClass == 'mage' ? '120' : '150'}"
-          damageModifier: "${schema.spec.heroClass == 'mage' ? '1.3' : schema.spec.heroClass == 'rogue' ? '1.1' : '1.0'}"
-          defense: "${schema.spec.heroClass == 'warrior' ? '0.25' : '0.0'}"
-          dodgeChance: "${schema.spec.heroClass == 'rogue' ? '0.25' : '0.0'}"
-          mana: "${string(schema.spec.mana)}"
+          maxHP: "200"
+          hp: ${string(schema.spec.hp)}

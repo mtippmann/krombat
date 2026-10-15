@@ -1,123 +1,34 @@
 apiVersion: v1
-kind: Namespace
-metadata:
-  name: rpg-system
----
-apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: rpg-backend-sa
   namespace: rpg-system
 ---
-# ClusterRole: only cluster-wide read permissions (list/watch across all namespaces).
-# Required for ListDungeons (cross-namespace list), pollGameMetrics, and watchers.
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: rpg-backend
-rules:
-  - apiGroups: [game.k8s.example]
-    resources: [dungeons, dungeons/status, attacks, attacks/status, actions, actions/status]
-    verbs: [list, watch]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: rpg-backend
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: rpg-backend
-subjects:
-  - kind: ServiceAccount
-    name: rpg-backend-sa
-    namespace: rpg-system
----
-# Role: namespaced write+read permissions scoped to the 'default' namespace.
-# All dungeon create/get/patch/delete and all Attack/Action CR upserts target 'default'.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: rpg-backend
-  namespace: default
+  namespace: rpg-demo
 rules:
   - apiGroups: [game.k8s.example]
-    resources: [dungeons, dungeons/status, attacks, attacks/status, actions, actions/status]
-    verbs: [get, create, update, patch, delete]
+    resources: [dungeons]
+    verbs: [get, list, create, update, patch, delete]
+  - apiGroups: [game.k8s.example]
+    resources: [heroes, monsters, bosses, treasures, loots]
+    verbs: [get, list]
+  - apiGroups: [""]
+    resources: [configmaps, secrets, events]
+    verbs: [get, list]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: rpg-backend
-  namespace: default
+  namespace: rpg-demo
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: rpg-backend
-subjects:
-  - kind: ServiceAccount
-    name: rpg-backend-sa
-    namespace: rpg-system
----
-# ClusterRole: reconcile-diff watcher (#462) — read-only watch on kro-managed child
-# resources inside dungeon namespaces. Separate from rpg-backend ClusterRole to keep
-# the core API group access isolated and auditable.
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: rpg-backend-reconcile-watch
-rules:
-  # Watch/get ConfigMaps in dungeon namespaces — kro-generated monster/hero/boss/game state CMs
-  - apiGroups: [""]
-    resources: [configmaps]
-    verbs: [get, list, watch]
-  # Watch/get all kro-managed child game CRs (heroes, monsters, bosses, treasures, modifiers, loots)
-  - apiGroups: [game.k8s.example]
-    resources: [heroes, heroes/status, monsters, monsters/status, bosses, bosses/status,
-                treasures, treasures/status, modifiers, modifiers/status, loots, loots/status]
-    verbs: [get, list, watch]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: rpg-backend-reconcile-watch
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: rpg-backend-reconcile-watch
-subjects:
-  - kind: ServiceAccount
-    name: rpg-backend-sa
-    namespace: rpg-system
----
-# Role: rpg-system namespace — allows backend to read/write the leaderboard ConfigMap
-# and the user profiles ConfigMap.
-# Note: 'create' cannot be restricted by resourceNames (the resource doesn't exist yet at
-# create time), so it is a separate rule without resourceNames. get/update/patch are
-# restricted to only the named ConfigMaps for least-privilege.
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: rpg-backend-leaderboard
-  namespace: rpg-system
-rules:
-  - apiGroups: [""]
-    resources: [configmaps]
-    verbs: [create]
-  - apiGroups: [""]
-    resources: [configmaps]
-    resourceNames: [krombat-leaderboard, krombat-profiles]
-    verbs: [get, update, patch]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: rpg-backend-leaderboard
-  namespace: rpg-system
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: rpg-backend-leaderboard
 subjects:
   - kind: ServiceAccount
     name: rpg-backend-sa

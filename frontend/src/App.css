@@ -1,42 +1,141 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-}
+.app { max-width: 1420px; margin: 0 auto; padding: 0 24px; }
+.site-header { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 26px 0; border-bottom: 3px solid var(--border); margin-bottom: 28px; }
+.brand, .session { display: flex; align-items: center; gap: 12px; }
+.brand h1 { color: var(--gold); font-size: 29px; text-transform: uppercase; letter-spacing: 4px; text-shadow: 3px 3px #000; line-height: 1.2; }
+.brand p { color: var(--muted); font-size: 12px; }
+.badge { display: inline-block; padding: 3px 8px; border: 1px solid var(--border); font-size: 12px; color: var(--blue); white-space: nowrap; }
+.site-footer { color: var(--muted); font-size: 12px; text-align: center; padding: 28px 0; margin-top: 20px; border-top: 2px solid var(--border); }
+.skip-link { position: absolute; top: -60px; z-index: 10; background: var(--gold); color: #121421; padding: 10px; }
+.skip-link:focus { top: 8px; }
+.panel { background: var(--card); border: 2px solid var(--border); box-shadow: 4px 4px 0 #080c17; padding: 22px; margin-bottom: 20px; min-width: 0; }
+.panel h2 { margin-bottom: 12px; color: var(--gold); }
+.panel h2 img, .panel h2 svg { margin-right: 4px; }
+.muted { color: var(--muted); font-size: 13px; }
+.eyebrow { color: var(--blue); text-transform: uppercase; font-size: 12px; font-weight: bold; letter-spacing: 1px; margin-bottom: 8px; }
+.button { min-height: 42px; border: 2px solid; padding: 9px 14px; font-weight: bold; box-shadow: 3px 3px 0 #080c17; color: #f4f5fa; background: #293653; border-color: #64728f; }
+.button:hover:not(:disabled) { filter: brightness(1.15); transform: translate(-1px, -1px); }
+.button:active:not(:disabled) { transform: translate(1px, 1px); box-shadow: none; }
+.button.primary { background: #8e2c48; border-color: #e86a85; }
+.button.secondary { color: #111827; background: var(--blue); border-color: #bcefff; }
+.button.gold { color: #211b06; background: var(--gold); border-color: #ffea8b; }
+.button.subtle { background: #202a42; border-color: #4c5d7d; }
+.button.danger { color: var(--red); background: #382232; border-color: #a64d65; }
+.button.small { min-height: 36px; font-size: 12px; padding: 6px 10px; }
+.text-button { color: var(--blue); background: none; border: 0; padding: 0; text-decoration: underline; text-underline-offset: 3px; }
+.error { color: #ffd6de; background: #3b2030; border-left: 4px solid #f8728e; padding: 12px 14px; margin-bottom: 18px; overflow-wrap: anywhere; white-space: pre-line; }
+.error .text-button { display: block; margin-top: 8px; }
+.loading, .empty-state { padding: 26px 0; color: var(--muted); }
+.welcome { max-width: 860px; margin: 0 auto 24px; text-align: center; padding: 32px; }
+.welcome-art { display: flex; align-items: center; justify-content: center; gap: 45px; margin-bottom: 8px; background: radial-gradient(ellipse, #31374b, transparent 70%); }
+.welcome h2 { font-size: clamp(21px, 4vw, 28px); margin-bottom: 16px; }
+.welcome > p:not(.eyebrow) { max-width: 620px; margin-left: auto; margin-right: auto; }
+.welcome .button { margin: 24px 0 16px; }
+.lobby-intro { margin: 0 0 24px; }
+.lobby-intro h2 { font-size: 25px; margin-bottom: 8px; }
+.lobby-layout { display: grid; grid-template-columns: minmax(280px, 380px) minmax(0, 1fr); gap: 24px; align-items: start; }
+.form-note { margin-bottom: 18px; }
+.create-form input, .create-form select { margin-bottom: 18px; }
+.create-form #dungeon-name { margin-bottom: 5px; }
+.create-form small { display: block; margin-bottom: 18px; }
+.create-form .button { margin-top: 2px; width: 100%; }
+.section-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.section-heading h2 { margin-bottom: 0; }
+.dungeon-list { list-style: none; padding: 0; margin: 18px 0 0; display: grid; gap: 12px; }
+.dungeon-choice { width: 100%; border: 2px solid var(--border); background: #141b2d; color: #e9edf6; padding: 16px; text-align: left; display: grid; gap: 5px; }
+.dungeon-choice:hover { border-color: var(--gold); }
+.dungeon-choice-title { font-size: 16px; font-weight: bold; overflow-wrap: anywhere; color: var(--gold); }
+.outcome-label { font-size: 12px; color: var(--blue); }
+.outcome-label.victory { color: var(--green); }
+.outcome-label.defeat { color: var(--red); }
+.dungeon-heading { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 22px; }
+.dungeon-heading h2 { font-size: 24px; margin: 8px 0 4px; overflow-wrap: anywhere; }
+.demo-layout { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(320px, 1fr); gap: 24px; align-items: start; }
+.game-column { min-width: 0; }
+.arena { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 28px minmax(0, 1fr); align-items: center; justify-items: center; gap: 6px; min-height: 335px; margin: 18px 0 24px; padding: 22px 20px; border: 3px solid #4e4a4e; border-radius: 48% / 27%; background: radial-gradient(ellipse, #0001 15%, #070b13ed 95%), url('/sprites/dungeon/floor-1.png') repeat center / 128px; box-shadow: inset 0 0 35px #080c17; }
+.arena-entity { width: 100%; max-width: 220px; text-align: center; }
+.arena-entity > img { filter: drop-shadow(4px 6px 0 #0008); }
+.arena-entity.locked > img { filter: saturate(.45) drop-shadow(4px 6px 0 #0008); }
+.arena-entity .button { margin-top: 9px; }
+.arena-versus { color: #d9c2a0; font-weight: bold; text-shadow: 2px 2px #000; }
+.state { color: var(--muted); font-size: 11px; margin-top: 7px; min-height: 19px; }
+.dead-text { color: var(--red); }
+.health { margin: 8px auto 0; max-width: 250px; text-align: left; }
+.health-label { display: flex; justify-content: space-between; gap: 5px; font-size: 11px; color: #e5e9f3; margin-bottom: 4px; flex-wrap: wrap; }
+.health-label output { color: #f8e39c; }
+.health-track { height: 10px; background: #0e1424; border: 1px solid #78839c; }
+.health-fill { height: 100%; background: #70da99; transition: width .25s ease-out; }
+.health-fill.mid { background: #f5c518; }
+.health-fill.low { background: #f47287; }
+.monster-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: 10px; }
+.monster-card { text-align: center; background: #111829; border: 2px solid var(--border); padding: 12px 9px; }
+.monster-card.defeated { border-color: #4b4d5d; }
+.monster-card .button { width: 100%; margin-top: 10px; }
+.turn-notice { min-height: 44px; margin-top: 16px; color: var(--blue); font-size: 12px; }
+.outcome { text-align: center; padding: 18px; margin-top: 12px; border: 2px solid; }
+.outcome h3 { font-size: 22px; margin-bottom: 8px; }
+.outcome.win { color: #f8dc68; border-color: var(--gold); background: #332d1b; }
+.outcome.loss { color: #ffc3d0; border-color: #da728c; background: #362130; }
+.treasure { display: flex; align-items: center; justify-content: center; gap: 18px; margin-top: 20px; }
+.treasure p { color: var(--gold); font-size: 13px; }
+.projection-values { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 18px 0; }
+.projection-values dt { font-size: 12px; color: var(--muted); }
+.projection-values dd { margin: 0; color: var(--blue); overflow-wrap: anywhere; }
+.reconciling { border-left: 3px solid var(--gold); background: #322c1e; padding: 12px; font-size: 12px; color: #f4dea4; }
+.reconciling p { margin-top: 6px; }
+.reconciling ul { margin-bottom: 0; overflow-wrap: anywhere; }
+.conditions { margin-top: 18px; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.conditions li + li { margin-top: 8px; }
+.lesson-list { margin: 18px 0 0; }
+.lesson-list li { margin-bottom: 12px; padding-left: 5px; }
+.lesson-list li:last-child { margin-bottom: 0; }
+.lesson-list strong { color: #f4dea4; }
+.example-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0; }
+.cel-playground form { margin-top: 14px; }
+.cel-result { margin-top: 18px; padding: 12px; background: #101827; border: 1px solid var(--border); }
+.cel-result pre { margin: 0 0 10px; color: var(--green); white-space: pre-wrap; overflow-wrap: anywhere; }
+.cel-playground .error { margin-top: 18px; margin-bottom: 0; }
+.snapshot-time { margin: 12px 0; color: var(--blue); font-size: 11px; }
+.resource-list { list-style: none; padding: 0; margin: 16px 0; max-height: 290px; overflow: auto; border: 1px solid var(--border); }
+.resource-list li + li { border-top: 1px solid var(--border); }
+.resource-choice { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; padding: 9px 12px; background: #12192a; color: #e9edf6; border: 0; text-align: left; overflow-wrap: anywhere; font-size: 12px; }
+.resource-choice:hover { background: #27334a; }
+.resource-choice[aria-pressed="true"] { background: #293b55; box-shadow: inset 3px 0 var(--blue); }
+.resource-kind { color: var(--blue); font-size: 11px; font-weight: bold; }
+.resource-detail h3 { font-size: 13px; overflow-wrap: anywhere; }
+.resource-json { font-size: 11px; line-height: 1.65; max-height: 720px; overflow: auto; margin: 12px -8px -8px; padding: 14px; border: 1px solid var(--border); background: #0c1220; tab-size: 2; }
+.secret-note { color: #f4dea4; background: #332c1d; font-size: 12px; padding: 10px; margin-top: 10px; }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
+@media (min-width: 1100px) {
+  .resource-inspector { position: sticky; top: 18px; }
 }
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+@media (max-width: 1000px) {
+  .demo-layout { grid-template-columns: minmax(0, 1fr); }
+  .resource-json { max-height: 520px; }
+  .arena { max-width: 650px; margin-left: auto; margin-right: auto; }
 }
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+@media (max-width: 640px) {
+  .app { padding: 0 14px; }
+  .site-header { align-items: flex-start; gap: 14px; padding: 20px 0; }
+  .brand h1 { font-size: 21px; letter-spacing: 2px; }
+  .brand > span { display: none; }
+  .session { gap: 7px; flex-wrap: wrap; justify-content: flex-end; font-size: 12px; }
+  .session .badge { display: none; }
+  .lobby-layout { grid-template-columns: 1fr; gap: 0; }
+  .panel { padding: 17px 14px; }
+  .welcome-art { gap: 0; }
+  .welcome-art img { max-width: 46%; height: auto; }
+  .welcome { padding: 22px 14px; }
+  .dungeon-heading { align-items: flex-start; }
+  .dungeon-heading h2 { font-size: 19px; }
+  .arena { gap: 0; padding: 20px 10px; border-radius: 45% / 15%; }
+  .arena-entity > img { max-width: 100%; height: auto; }
+  .arena-entity h3 { font-size: 13px; }
+  .arena-entity .state { font-size: 10px; }
+  .arena-versus { font-size: 11px; }
+  .monster-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .monster-card .button { font-size: 11px; padding: 6px 4px; min-height: 44px; }
+  .projection-values { gap: 12px; }
 }
-
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
 }

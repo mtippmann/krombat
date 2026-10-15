@@ -1,276 +1,104 @@
-# Operations Runbook
+# Local operations
 
-## Common Operations
+Every command targets minikube explicitly. Never change the shared current
+context, use a cloud cluster, or remove the shared kro installation.
 
-### Check dungeon status
-```bash
-kubectl get dungeons
-kubectl get dungeon <name> -o jsonpath='{.status}'
-```
-
-### Check all resources in a dungeon
-```bash
-kubectl get configmaps -n <dungeon-name>
-kubectl get secrets -n <dungeon-name>
-```
-
-### Check RGD health
-```bash
-kubectl get rgd
-kubectl get rgd dungeon-graph -o jsonpath='{.status.conditions[?(@.type=="Ready")].message}'
-kubectl get rgd attack-graph -o jsonpath='{.status.conditions[?(@.type=="Ready")].message}'
-```
-
-### Force kro to re-reconcile a dungeon
-```bash
-kubectl annotate dungeon <name> kro.run/force-reconcile=$(date +%s) --overwrite
-```
-
-## Troubleshooting
-
-### Attack CR stuck or stale
-```bash
-# Check Attack CR status
-kubectl get attacks
-
-# Delete a stale Attack CR
-kubectl delete attack <attack-name>
-```
-
-### Monster ConfigMap not updating state after attack
-kro reconciles on a loop. Wait 10-15 seconds. If still stuck:
-```bash
-# Check the Dungeon CR status.game — HP values should reflect the attack
-kubectl get dungeon <name> -o jsonpath='{.status.game.monsterHP}'
-
-# Force reconciliation
-kubectl annotate dungeon <name> kro.run/force-reconcile=$(date +%s) --overwrite
-```
-
-### Manually set monster HP (emergency)
-```bash
-# Set monster-0 HP to 0 (kill it)
-kubectl patch dungeon <name> --type=merge -p '{"spec":{"monsterHP":[0,50,50]}}'
-```
-
-### Manually defeat boss (emergency)
-```bash
-kubectl patch dungeon <name> --type=merge -p '{"spec":{"bossHP":0}}'
-```
-
-### Clean up orphaned dungeon namespace
-```bash
-# Delete the dungeon CR — kro will clean up the namespace
-kubectl delete dungeon <name>
-
-# If namespace is stuck, force delete
-kubectl delete ns <dungeon-name> --force --grace-period=0
-```
-
-### RGD stuck in Inactive
-```bash
-# Check the error
-kubectl get rgd <name> -o jsonpath='{.status.conditions[?(@.type=="Ready")].message}'
-
-# Delete and let Argo CD recreate it
-kubectl delete rgd <name>
-```
-
-## Dungeon Reaper
-
-A CronJob runs every 10 minutes and deletes dungeons older than 4 hours (configurable via `MAX_AGE_HOURS` env var).
+## Check
 
 ```bash
-# Check reaper status
-kubectl get cronjob dungeon-reaper -n rpg-system
-
-# Check last run
-kubectl get jobs -n rpg-system -l job-name=dungeon-reaper --sort-by=.metadata.creationTimestamp
-
-# Trigger manual reap
-kubectl create job --from=cronjob/dungeon-reaper manual-reap -n rpg-system
+bash scripts/local.sh status
+getent ahostsv4 krombat.test
+minikube -p minikube ip
+curl --fail http://krombat.test/
+kubectl --context minikube -n rpg-system get pods
+kubectl --context minikube -n rpg-system logs deployment/rpg-backend --tail=50
+kubectl --context minikube -n kro-system logs deployment/kro --tail=50
+kubectl --context minikube -n rpg-demo get events --sort-by=.lastTimestamp
 ```
 
-## Argo CD
+An nginx 404 before deployment means DNS and ingress connectivity work, but no
+matching application route exists. After deployment, inspect the `krombat`
+Ingress and service endpoints for routing problems. A 502/503 usually means the
+backend or frontend has not become ready.
 
-### Force sync
 ```bash
-kubectl annotate application krombat -n argocd argocd.argoproj.io/refresh=hard --overwrite
+kubectl --context minikube -n rpg-system describe ingress krombat
+kubectl --context minikube -n rpg-system get endpointslices
+kubectl --context minikube -n rpg-demo describe dungeon team-demo
+kubectl --context minikube get rgd dungeon-graph -o yaml
 ```
 
-### Check sync status
+The host's `krombat.test` mapping is already configured; deployment does not
+edit resolver configuration or hosts files. If it regresses, compare the host
+lookup with the minikube IP before making separately approved DNS changes.
+
+## Rebuild and restart
+
 ```bash
-kubectl get application krombat -n argocd -o jsonpath='Sync: {.status.sync.status} Rev: {.status.sync.revision}'
+bash scripts/local.sh build
+bash scripts/local.sh deploy
 ```
 
-## CloudWatch Observability
+Images are explicitly loaded into the minikube profile and use
+`imagePullPolicy: Never`. The deploy command restarts only the two game
+deployments so a reused local image tag is picked up.
 
-### Log Groups
-| Log Group | Contents | Retention |
-|-----------|----------|-----------|
-| `/eks/krombat/rpg-system` | Backend + frontend container logs | 7 days |
-| `/eks/krombat/game` | Backend combat logs, dungeon namespace resources | 7 days |
-| `/eks/krombat/kro` | kro controller logs | 30 days |
-| `/eks/krombat/argocd` | Argo CD logs | 30 days |
+The deploy helper checks the existing controller image, ownership of its
+namespaces/graphs/CRDs, dependency ordering, graph readiness, app rollouts,
+and ingress response. It generates the session Secret only when missing.
+No Secret value is written into the repository.
 
-### Find logs for a specific dungeon
-```
-# CloudWatch Logs Insights query
-fields @timestamp, @message
-| filter @message like /my-dungeon/
-| sort @timestamp desc
-| limit 50
-```
+## Reset a run
 
-### Trace an attack
-```
-fields @timestamp, @message
-| filter @message like /attack/ and @message like /my-dungeon/
-| sort @timestamp desc
-| limit 20
-```
+Prefer **Delete dungeon** in the UI, then create a fresh named dungeon.
+For the documented presentation instance only:
 
-### Check kro reconciliation errors
-```
-# Query the kro log group
-fields @timestamp, @message
-| filter @message like /error|Error|ERROR/
-| sort @timestamp desc
-| limit 30
-```
-
-### Check backend API errors
-```
-# Query rpg-system log group (JSON structured logs)
-fields @timestamp, msg, status, error, dungeon
-| filter component = 'api' and level = 'WARN'
-| sort @timestamp desc
-| limit 20
-```
-
-### View backend combat math
-```
-# Query game log group
-fields @timestamp, @message
-| filter @message like /Hero attacks/ or @message like /counter-attack/ or @message like /Turn:/
-| sort @timestamp desc
-| limit 30
-```
-
-### Dashboard
-Access the CloudWatch dashboard at:
 ```bash
-terraform -chdir=infra output cloudwatch_dashboard_url
+kubectl --context minikube -n rpg-demo delete dungeon team-demo \
+  --ignore-not-found --wait=true
+kubectl --context minikube -n rpg-demo get hero,monster,boss,treasure,loot,cm,secret \
+  -l game.k8s.example/dungeon=team-demo
 ```
 
-### Alarms
-- `krombat-backend-restarts` — fires when backend pod restarts > 3 times in 5 minutes
+Do not strip finalizers to force deletion. Inspect graph conditions and kro
+logs if inventory cleanup stalls. Removing a Namespace is not a normal reset.
 
+## Ownership and drift
 
-## Child RGDs (RGD Composition)
+kro v0.9.4 records managed resources using ApplySet inventory and labels. Its
+finalizer performs ordered pruning. Parent-child identities are available in
+`kro.run/instance-id`, not necessarily `metadata.ownerReferences`.
 
-### Check child CR status
 ```bash
-kubectl get monsters,bosses,heroes,treasures -n <dungeon-name>
+kubectl --context minikube -n rpg-demo get cm team-demo-hero -o yaml
+kubectl --context minikube -n rpg-demo patch cm team-demo-hero --type=merge \
+  -p '{"data":{"hp":"9999"}}'
+kubectl --context minikube -n rpg-demo get cm team-demo-hero -w
 ```
 
-### Check child CR details
+Stop the watch after the real hero HP returns. Only edit this explicitly
+demo-owned resource, not another workload's configuration.
+
+## Remove this demo
+
+First delete each intended Dungeon **by name** and wait for its children to
+disappear. Confirm there are no runs you want to preserve:
+
 ```bash
-kubectl get monster <dungeon>-monster-0 -n <dungeon> -o jsonpath='{.status.entityState}'
-kubectl get boss <dungeon>-boss -n <dungeon> -o jsonpath='{.status.entityState}'
-kubectl get hero <dungeon>-hero -n <dungeon> -o jsonpath='{.status.entityState}'
+kubectl --context minikube -n rpg-demo get dungeons
 ```
 
-### Child RGD not reconciling
+After named runs have been removed, remove only the app/RBAC manifests and the
+six graphs installed by this checkout:
+
 ```bash
-# Check all RGDs are Active
-kubectl get rgd
-
-# If a child RGD is Inactive, check its error
-kubectl get rgd <name> -o jsonpath='{.status.conditions[?(@.type=="Ready")].message}'
-
-# Delete and let Argo CD recreate (child RGDs have sync-wave: -1)
-kubectl delete rgd <name>
+kubectl --context minikube delete -f manifests/system --ignore-not-found
+kubectl --context minikube delete -f manifests/rbac/rbac.yaml --ignore-not-found
+kubectl --context minikube delete -f manifests/rgds --ignore-not-found
+kubectl --context minikube -n rpg-system delete secret krombat-session --ignore-not-found
 ```
 
-### Dungeon status shows wrong values
-The dungeon status is derived from child CR statuses. If it's wrong:
-```bash
-# Check the chain: Dungeon spec triggers → status.game → child CR spec → child CR status → Dungeon status
-kubectl get dungeon <name> -o jsonpath='{.status.game.monsterHP}'
-kubectl get monster <name>-monster-0 -n <name> -o jsonpath='{.spec.hp} {.status.entityState}'
-kubectl get dungeon <name> -o jsonpath='{.status.livingMonsters}'
-```
-
-
-## Hero Abilities
-
-### Debug Mage heal
-```bash
-kubectl get dungeon <name> -o jsonpath='HP:{.status.game.heroHP} Mana:{.status.game.heroMana}'
-# Heal requires mana >= 2, HP < 80
-```
-
-### Debug Warrior taunt
-```bash
-kubectl get dungeon <name> -o jsonpath='Taunt:{.status.game.tauntActive}'
-# tauntActive=1 means 60% damage reduction active
-```
-
-### Debug Rogue backstab
-```bash
-kubectl get dungeon <name> -o jsonpath='CD:{.status.game.backstabCooldown}'
-# backstabCooldown > 0 means backstab unavailable
-```
-
-## Dungeon Modifiers
-
-### Check active modifier
-```bash
-kubectl get dungeon <name> -o jsonpath='Modifier:{.status.game.modifier} Effect:{.status.modifier}'
-kubectl get modifier -n <dungeon-name>
-```
-
-### Modifier not showing in status
-```bash
-# Check modifier-graph RGD is Active
-kubectl get rgd modifier-graph
-# Check Modifier CR exists
-kubectl get modifier <name>-modifier -n <name> -o yaml
-```
-
-## Loot System
-
-### Check inventory
-```bash
-kubectl get dungeon <name> -o jsonpath='Inv:{.status.game.inventory} Wpn:{.status.game.weaponBonus}({.status.game.weaponUses}) Armor:{.status.game.armorBonus}'
-```
-
-### Use item via kubectl
-```bash
-# HP potion
-kubectl apply -f - <<EOF
-apiVersion: game.k8s.example/v1alpha1
-kind: Action
-metadata:
-  name: use-potion-$(date +%s)
-spec:
-  dungeonName: <name>
-  dungeonNamespace: default
-  target: use-hppotion-rare
-  damage: 0
-EOF
-```
-
-## Status Effects
-
-### Check active effects
-```bash
-kubectl get dungeon <name> -o jsonpath='Poison:{.status.game.poisonTurns} Burn:{.status.game.burnTurns} Stun:{.status.game.stunTurns}'
-```
-
-### Manually clear effects
-```bash
-kubectl patch dungeon <name> --type=merge -p '{"spec":{"attackSeq":0}}'
-# Note: status.game fields are written by kro state nodes — trigger a reconcile instead
-```
+Retain the two namespaces unless you have inspected their contents and explicitly
+decided to remove them. Do not uninstall kro, nginx, monitoring, the existing
+`my-application` graph, or the minikube profile. Graph deletion removes generated
+API definitions; never do this while preserving game instances.

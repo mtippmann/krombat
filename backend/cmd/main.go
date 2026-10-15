@@ -1,104 +1,52 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
+	"strconv"
+	"time"
 
 	"github.com/pnz1990/krombat/backend/internal/handlers"
 	"github.com/pnz1990/krombat/backend/internal/k8s"
-	"github.com/pnz1990/krombat/backend/internal/ws"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func main() {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
-
-	// Validate KROMBAT_TEST_USER early: Kubernetes label values must be ≤63 chars.
-	// The value is used as krombat.io/owner label — a 64-char value causes 500 on list.
-	if tv := os.Getenv("KROMBAT_TEST_USER"); len(tv) > 63 {
-		slog.Error("KROMBAT_TEST_USER exceeds 63 characters — Kubernetes label value limit; rotate the krombat-test-auth secret with: bash tests/create-test-secret.sh --rotate")
+	if err := run(); err != nil {
+		slog.Error("backend stopped", "error", err)
 		os.Exit(1)
 	}
+}
 
-	// #418: SESSION_SECRET must be present — fail fast rather than running degraded
-	// with a random per-pod key that breaks multi-replica sessions.
-	if os.Getenv("SESSION_SECRET") == "" {
-		slog.Error("SESSION_SECRET is not set — cannot start without a stable HMAC key; ensure krombat-github-oauth Secret contains SESSION_SECRET")
-		os.Exit(1)
+func run() error {
+	secret := os.Getenv("SESSION_SECRET")
+	if err := handlers.ValidateSessionSecret(secret); err != nil {
+		return err
 	}
-
-	// #428: OAuth env vars must be set — remove hardcoded production URL fallback.
-	// Any misconfigured deployment fails immediately rather than silently sending
-	// OAuth tokens to the production server.
-	for _, v := range []string{"GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET", "GITHUB_CALLBACK_URL"} {
-		if os.Getenv(v) == "" {
-			slog.Error("required env var not set — cannot start", "var", v)
-			os.Exit(1)
-		}
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
 	}
-
+	number, err := strconv.Atoi(port)
+	if err != nil || number < 1 || number > 65535 {
+		return errors.New("PORT must be an integer between 1 and 65535")
+	}
 	client, err := k8s.NewClient()
 	if err != nil {
-		slog.Error("failed to create k8s client", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("create Kubernetes client: %w", err)
 	}
-
-	hub := ws.NewHub()
-	go hub.Run()
-	go k8s.StartWatchers(client, hub)
-	go k8s.StartReconcileDiffWatcher(client, hub)
-
-	mux := http.NewServeMux()
-	h := handlers.New(client, hub)
-
-	mux.HandleFunc("POST /api/v1/dungeons", h.CreateDungeon)
-	mux.HandleFunc("GET /api/v1/dungeons", h.ListDungeons)
-	mux.HandleFunc("GET /api/v1/dungeons/{namespace}/{name}", h.GetDungeon)
-	mux.HandleFunc("DELETE /api/v1/dungeons/{namespace}/{name}", h.DeleteDungeon)
-	mux.HandleFunc("POST /api/v1/dungeons/{namespace}/{name}/attacks", h.AttackWithRateLimit())
-	mux.HandleFunc("GET /api/v1/dungeons/{namespace}/{name}/resources", h.GetDungeonResource)
-	mux.HandleFunc("POST /api/v1/dungeons/{namespace}/{name}/cel-eval", h.CelEvalHandler)
-	mux.HandleFunc("GET /api/v1/run-card/{namespace}/{name}", h.RunCard)
-	mux.HandleFunc("GET /api/v1/run-narrative/{namespace}/{name}", h.RunNarrative)
-	mux.HandleFunc("GET /api/v1/leaderboard", h.GetLeaderboard)
-	mux.HandleFunc("GET /api/v1/profile", h.GetProfile)
-	mux.HandleFunc("POST /api/v1/profile/cert", h.AwardCert)
-	mux.HandleFunc("GET /api/v1/events", h.Events)
-	mux.HandleFunc("POST /api/v1/client-error", h.ClientErrorHandler)
-	mux.HandleFunc("POST /api/v1/vitals", h.VitalsHandler)
-	mux.HandleFunc("POST /api/v1/events-track", h.EventsTrackHandler)
-	// Auth routes
-	mux.HandleFunc("GET /api/v1/auth/login", handlers.LoginHandler)
-	mux.HandleFunc("GET /api/v1/auth/callback", handlers.CallbackHandler)
-	mux.HandleFunc("GET /api/v1/auth/me", handlers.MeHandler)
-	mux.HandleFunc("GET /api/v1/auth/logout", handlers.LogoutHandler)
-	// Test-only login: issues a real session cookie when KROMBAT_TEST_USER is set.
-	// Returns 404 when the krombat-test-auth secret is absent (i.e. in environments without the secret).
-	mux.HandleFunc("GET /api/v1/auth/test-login", handlers.TestLoginHandler)
-	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) })
-	// #560: return 200 on root to silence ALB health probe 404 noise (~19k/10h).
-	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) })
-
-	// #416: serve Prometheus metrics on a separate internal-only port (9090).
-	// This port is NOT routed through the ALB ingress, preventing public exposure.
-	metricsMux := http.NewServeMux()
-	metricsMux.Handle("/metrics", promhttp.Handler())
-	go func() {
-		metricsAddr := ":9090"
-		slog.Info("metrics server starting", "addr", metricsAddr)
-		if err := http.ListenAndServe(metricsAddr, metricsMux); err != nil {
-			slog.Error("metrics server failed", "error", err)
-		}
-	}()
-
-	addr := ":8080"
-	if p := os.Getenv("PORT"); p != "" {
-		addr = ":" + p
+	api, err := handlers.New(client.Dynamic, secret)
+	if err != nil {
+		return fmt.Errorf("initialize API: %w", err)
 	}
-	slog.Info("backend starting", "addr", addr)
-	if err := http.ListenAndServe(addr, handlers.AccessLog(handlers.AuthMiddleware(mux))); err != nil {
-		slog.Error("server failed", "error", err)
-		os.Exit(1)
+	server := &http.Server{
+		Addr: ":" + port, Handler: api.Routes(),
+		ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second,
+		WriteTimeout: 30 * time.Second, IdleTimeout: 60 * time.Second,
 	}
+	slog.Info("local demo backend starting", "addr", server.Addr, "namespace", k8s.GameNamespace)
+	return server.ListenAndServe()
 }

@@ -1,260 +1,155 @@
 const BASE = '/api/v1'
+export const DEMO_NAMESPACE = 'rpg-demo'
 
-// Shared fetch options — include credentials (session cookie) on all API calls.
-const CREDS: RequestInit = { credentials: 'include' }
+export type Difficulty = 'easy' | 'normal' | 'hard'
 
-export interface DungeonSummary {
-  name: string; namespace: string; difficulty: string
-  livingMonsters: number | null; bossState: string | null; victory: boolean | null
-  modifier?: string | null; runCount?: number | null
+export interface ObjectMeta {
+  name: string
+  namespace?: string
+  resourceVersion?: string
+  generation?: number
+  [field: string]: unknown
 }
 
-// GetDungeon now returns the raw Dungeon CR — game state in status.game, trigger fields in spec
+export interface KubernetesResource {
+  apiVersion?: string
+  kind?: string
+  metadata: ObjectMeta
+  [field: string]: unknown
+}
+
 export interface KroCondition {
-  type: string       // e.g. "Ready", "Error"
-  status: string     // "True" or "False"
+  type: string
+  status: string
   reason?: string
   message?: string
-  lastTransitionTime?: string
+  observedGeneration?: number
 }
 
-export interface DungeonCR {
-  metadata: { name: string; namespace: string; creationTimestamp?: string; labels?: Record<string, string> }
+export interface DungeonStatus {
+  livingMonsters?: number | string
+  bossState?: string
+  bossPhase?: string
+  maxHeroHP?: number | string
+  maxMonsterHP?: number | string
+  maxBossHP?: number | string
+  victory?: boolean | string
+  treasureState?: string
+  observedGeneration?: number
+  conditions?: KroCondition[]
+}
+
+export interface Dungeon extends KubernetesResource {
   spec: {
-    // Immutable creation-time config (written once by backend on dungeon creation)
-    monsters: number; difficulty: string; heroClass?: string; runCount?: number
-    // Trigger fields — written by backend to drive kro state-node reconciliation
-    attackSeq?: number; actionSeq?: number
-    lastAttackTarget?: string; lastAttackSeed?: number; lastAttackIndex?: number
-    lastAttackIsBoss?: number; lastAttackIsBackstab?: number
-    lastAction?: string; lastAbility?: string
-    lastHeroAction?: string; lastEnemyAction?: string; lastCombatLog?: string
-    lastLootDrop?: string
-    inventory?: string
-    enterRoom2?: number
-    xpEarned?: number
-  }
-  status?: {
-    livingMonsters: number; bossState: string; victory: boolean; defeated: boolean
-    loot: string; maxMonsterHP: number; maxBossHP: number
-    maxHeroHP: number; diceFormula: string; monsterCounter: number; bossCounter: number
-    modifier?: string; modifierType?: string; treasureState?: string; bossPhase?: string
-    conditions?: KroCondition[]
-    // KREP-023: kro-computed game state lives in status.game (state node storeName)
-    game?: {
-      heroHP?: number; heroMana?: number; bossHP?: number
-      monsterHP?: number[]; monsterTypes?: string[]
-      modifier?: string; inventory?: string
-      weaponBonus?: number; weaponUses?: number; armorBonus?: number; shieldBonus?: number
-      helmetBonus?: number; pantsBonus?: number; bootsBonus?: number
-      ringBonus?: number; amuletBonus?: number
-      poisonTurns?: number; burnTurns?: number; stunTurns?: number
-      tauntActive?: number; backstabCooldown?: number
-      treasureOpened?: number; doorUnlocked?: number; currentRoom?: number
-      room2MonsterHP?: number[]; room2BossHP?: number
-      lastLootDrop?: string
-      initProcessedSeq?: number; combatProcessedSeq?: number
-      abilityProcessedSeq?: number; actionProcessedSeq?: number
-      room2ProcessedSeq?: number; dotProcessedSeq?: number
-      tauntProcessedSeq?: number; cooldownProcessedSeq?: number
-      ringProcessedSeq?: number
+    monsters: number
+    difficulty: Difficulty
+    heroClass: 'warrior'
+    attackSeq: number
+    game: {
+      heroHP: number
+      bossHP: number
+      monsterHP: number[]
+      treasureOpened: 0 | 1
     }
   }
+  status?: DungeonStatus
 }
 
-// Auth types
 export interface AuthUser {
   login: string
   avatarUrl: string
 }
 
-export async function getMe(): Promise<AuthUser | null> {
-  try {
-    const r = await fetch(`${BASE}/auth/me`, CREDS)
-    if (r.status === 401) return null
-    if (!r.ok) return null
-    return r.json()
-  } catch {
-    return null
-  }
-}
-
-export async function logout(): Promise<void> {
-  await fetch(`${BASE}/auth/logout`, CREDS)
-}
-
-export async function listDungeons(): Promise<DungeonSummary[]> {
-  const r = await fetch(`${BASE}/dungeons`, CREDS)
-  if (!r.ok) throw new Error(await r.text())
-  return r.json()
-}
-
-export async function getDungeon(ns: string, name: string): Promise<DungeonCR> {
-  const r = await fetch(`${BASE}/dungeons/${ns}/${name}`, CREDS)
-  if (!r.ok) throw new Error(await r.text())
-  return r.json()
-}
-
-export async function createDungeon(name: string, monsters: number, difficulty: string, heroClass: string = 'warrior', namespace: string = 'default') {
-  const r = await fetch(`${BASE}/dungeons`, {
-    ...CREDS, method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, monsters, difficulty, heroClass, namespace }),
-  })
-  if (!r.ok) throw new Error(await r.text())
-  return r.json()
-}
-
-export interface NewGamePlusOptions {
-  runCount: number
-  // *Bonus fields removed — gear is carried in inventory only (#555)
-}
-
-export async function createNewGamePlus(
-  name: string, monsters: number, difficulty: string, heroClass: string,
-  opts: NewGamePlusOptions, namespace: string = 'default'
-) {
-  const r = await fetch(`${BASE}/dungeons`, {
-    ...CREDS, method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, monsters, difficulty, heroClass, namespace, ...opts }),
-  })
-  if (!r.ok) throw new Error(await r.text())
-  return r.json()
-}
-export async function deleteDungeon(ns: string, name: string) {
-  const r = await fetch(`${BASE}/dungeons/${ns}/${name}`, { ...CREDS, method: 'DELETE' })
-  if (!r.ok && r.status !== 204) throw new Error(await r.text())
-}
-
-export interface LeaderboardEntry {
-  dungeonName: string
-  githubLogin?: string
-  heroClass: string
-  difficulty: string
-  outcome: string  // 'victory' | 'defeat' | 'room1-cleared' | 'in-progress'
-  totalTurns: number
-  currentRoom: number
-  timestamp: string
-}
-
-export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
-  const r = await fetch(`${BASE}/leaderboard`, CREDS)
-  if (!r.ok) return []
-  return r.json()
-}
-
-export interface UserProfile {
-  dungeonsPlayed: number
-  dungeonsWon: number
-  dungeonsLost: number
-  dungeonsAbandoned: number
-  totalTurns: number
-  totalKills: number
-  totalBossKills: number
-  favouriteClass: string
-  favouriteDifficulty: string
-  inventory: string          // JSON array string e.g. '["weapon-epic","hppotion-rare"]'
-  weaponBonus: number; weaponUses: number; armorBonus: number; shieldBonus: number
-  helmetBonus: number; pantsBonus: number; bootsBonus: number; ringBonus: number; amuletBonus: number
-  heroHP: number
-  heroMana: number
-  earnedBadges: string[]
-  badgeCounts: Record<string, number>
-  xp: number
-  level: number
-  kroCertificates: string[]
-  firstPlayed: string
-  lastPlayed: string
-}
-
-export async function getProfile(): Promise<UserProfile | null> {
-  try {
-    const r = await fetch(`${BASE}/profile`, CREDS)
-    if (!r.ok) return null
-    return r.json()
-  } catch {
-    return null
-  }
-}
-
-// Award a Tier 2 certificate (frontend-triggered on K8s log tab interactions, #361).
-export async function awardCert(cert: string): Promise<string[] | null> {
-  try {
-    const r = await fetch(`${BASE}/profile/cert`, {
-      ...CREDS, method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cert }),
-    })
-    if (!r.ok) return null
-    return r.json()
-  } catch {
-    return null
-  }
-}
-
 export class ApiError extends Error {
-  constructor(public readonly status: number, message: string) {
+  readonly status: number
+
+  constructor(status: number, message: string) {
     super(message)
     this.name = 'ApiError'
+    this.status = status
   }
 }
 
-const VALID_RESOURCE_KINDS = [
-  'dungeon', 'hero', 'herostate', 'boss', 'bossstate', 'namespace', 'gameconfig',
-  'monster', 'monsterstate', 'treasure', 'treasurecm', 'treasuresecret', 'modifier',
-  'modifiercm',
-  // #437: Loot CR and loot-graph children
-  'loot', 'lootinfo', 'lootsecret',
-  'bossloot', 'bosslootinfo', 'bosslootsecret',
-] as const
-export type ResourceKind = typeof VALID_RESOURCE_KINDS[number]
-
-/** Sanitize Kubernetes resource name/namespace to safe path chars */
-function safePath(s: string): string { return s.replace(/[^a-zA-Z0-9\-_.]/g, '').slice(0, 253) }
-
-export async function getDungeonResource(ns: string, name: string, kind: ResourceKind, index?: number): Promise<any> {
-  // Same-origin call to /api/v1 only. ns/name are K8s identifiers, sanitized.
-  let url = `${BASE}/dungeons/${safePath(ns)}/${safePath(name)}/resources?kind=${kind}`
-  if (index !== undefined) url += `&index=${index}`
-  const r = await fetch(url, CREDS)
-  if (!r.ok) return null
-  return r.json()
-}
-
-export async function submitAttack(ns: string, dungeon: string, target: string, damage: number, seq?: number) {
-  const r = await fetch(`${BASE}/dungeons/${ns}/${dungeon}/attacks`, {
-    ...CREDS, method: 'POST', headers: { 'Content-Type': 'application/json' },
-    // seq: send the last-known sequence so the backend can detect concurrent
-    // writes. Omit (send -1) when seq is unknown to stay backward-compatible.
-    body: JSON.stringify({ target, damage, seq: seq ?? -1 }),
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const headers = new Headers(options.headers)
+  headers.set('Accept', 'application/json')
+  if (options.body) headers.set('Content-Type', 'application/json')
+  const response = await fetch(`${BASE}${path}`, {
+    credentials: 'same-origin',
+    cache: 'no-store',
+    ...options,
+    signal: options.signal
+      ? AbortSignal.any([options.signal, AbortSignal.timeout(15_000)])
+      : AbortSignal.timeout(15_000),
+    headers,
   })
-  if (!r.ok) throw new ApiError(r.status, await r.text())
-  return r.json()
+  if (!response.ok) {
+    let message = await response.text()
+    try {
+      const body: { error?: string; message?: string } = JSON.parse(message)
+      message = body.error || body.message || message
+    } catch {
+      // Some ingress errors are plain text rather than API JSON.
+    }
+    throw new ApiError(response.status, message || `HTTP ${response.status}`)
+  }
+  if (response.status === 204) return undefined as T
+  return response.json() as Promise<T>
 }
 
-/**
- * reportError sends a structured error report to the backend for CloudWatch.
- * Fire-and-forget — never throws.
- */
-export function reportError(context: string, err: unknown) {
-  const message = err instanceof Error ? err.message : String(err)
-  fetch('/api/v1/client-error', {
-    ...CREDS,
+function dungeonPath(name: string) {
+  return `/dungeons/${DEMO_NAMESPACE}/${encodeURIComponent(name)}`
+}
+
+export async function getMe(signal?: AbortSignal): Promise<AuthUser | null> {
+  try {
+    return await request<AuthUser>('/auth/me', { signal })
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) return null
+    throw error
+  }
+}
+
+export const login = () => request<AuthUser>('/auth/login', { method: 'POST' })
+export const logout = () => request<void>('/auth/logout', { method: 'POST' })
+export const listDungeons = (signal?: AbortSignal) =>
+  request<Dungeon[]>('/dungeons', { signal })
+export const getDungeon = (name: string, signal?: AbortSignal) =>
+  request<Dungeon>(dungeonPath(name), { signal })
+export const createDungeon = (name: string, monsters: number, difficulty: Difficulty) =>
+  request<Dungeon>('/dungeons', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ context, message, url: window.location.href, timestamp: new Date().toISOString() }),
-  }).catch(() => {})
-}
-
-/**
- * trackEvent sends a game interaction event to the backend for CloudWatch.
- * Fire-and-forget — never throws.
- */
-export function trackEvent(event: string, props: Record<string, unknown> = {}) {
-  fetch('/api/v1/events-track', {
-    ...CREDS,
+    body: JSON.stringify({ name, monsters, difficulty, heroClass: 'warrior' }),
+  })
+export const deleteDungeon = (name: string, signal?: AbortSignal) =>
+  request<void>(dungeonPath(name), { method: 'DELETE', signal })
+export const submitAttack = (dungeon: Dungeon, target: string, signal?: AbortSignal) =>
+  request<Dungeon>(`${dungeonPath(dungeon.metadata.name)}/attacks`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ event, ...props, ts: Date.now() }),
-    keepalive: true,
-  }).catch(() => {})
+    body: JSON.stringify({ target, seq: dungeon.spec.attackSeq }),
+    signal,
+  })
+export const openTreasure = (dungeon: Dungeon, signal?: AbortSignal) =>
+  submitAttack(dungeon, 'open-treasure', signal)
+export const getResources = (name: string, signal?: AbortSignal) =>
+  request<KubernetesResource[]>(`${dungeonPath(name)}/resources`, { signal })
+export const evaluateCEL = (name: string, expr: string, signal?: AbortSignal) =>
+  request<{ result: string; error?: string }>(`${dungeonPath(name)}/cel-eval`, {
+    method: 'POST',
+    body: JSON.stringify({ expr }),
+    signal,
+  })
+
+export function isAborted(error: unknown) {
+  return error instanceof DOMException && error.name === 'AbortError'
 }
 
+export function errorMessage(error: unknown) {
+  if (error instanceof DOMException && error.name === 'TimeoutError') {
+    return 'The local API timed out. Check the backend and try again.'
+  }
+  if (error instanceof SyntaxError) {
+    return 'Unexpected API response. Check that /api is routed to the local backend.'
+  }
+  return error instanceof Error ? error.message : String(error)
+}

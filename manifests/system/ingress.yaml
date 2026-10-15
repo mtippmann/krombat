@@ -1,58 +1,17 @@
----
-# IngressClassParams: ALB configuration (EKS Auto Mode uses eks.amazonaws.com/v1)
-apiVersion: eks.amazonaws.com/v1
-kind: IngressClassParams
-metadata:
-  name: krombat
-spec:
-  scheme: internet-facing
-  certificateARNs:
-    - arn:aws:acm:us-west-2:319279230668:certificate/fcaf3070-54fb-4ac1-bc76-4f57caf00221
-  loadBalancerAttributes:
-    - key: idle_timeout.timeout_seconds
-      value: "300"
----
-# IngressClass: wires EKS Auto Mode controller to the above params
-apiVersion: networking.k8s.io/v1
-kind: IngressClass
-metadata:
-  name: krombat
-spec:
-  controller: eks.amazonaws.com/alb
-  parameters:
-    apiGroup: eks.amazonaws.com
-    kind: IngressClassParams
-    name: krombat
----
-# Ingress: path-based routing + external-dns hostname annotation
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: krombat
   namespace: rpg-system
-  annotations:
-    external-dns.alpha.kubernetes.io/hostname: "learn-kro.eks.aws.dev"
-    alb.ingress.kubernetes.io/ssl-redirect: "443"
-    alb.ingress.kubernetes.io/target-type: ip
-    # Force HTTP/1.1 on backend connections — required for WebSocket upgrade.
-    # HTTP/2 does not support the Upgrade header, so WS connections fail with 400
-    # when the ALB negotiates HTTP/2 with the backend.
-    alb.ingress.kubernetes.io/backend-protocol-version: HTTP1
-    alb.ingress.kubernetes.io/ssl-policy: "ELBSecurityPolicy-TLS13-1-2-2021-06"
+  labels:
+    app.kubernetes.io/part-of: krombat
 spec:
-  ingressClassName: krombat
+  ingressClassName: nginx
   rules:
-    - host: learn-kro.eks.aws.dev
+    - host: krombat.test
       http:
         paths:
           - path: /api
-            pathType: Prefix
-            backend:
-              service:
-                name: rpg-backend
-                port:
-                  number: 8080
-          - path: /ws
             pathType: Prefix
             backend:
               service:

@@ -1,7 +1,6 @@
 import React from 'react'
 
 interface State {
-  hasError: boolean
   error: Error | null
 }
 
@@ -9,33 +8,22 @@ export class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
   State
 > {
-  state: State = { hasError: false, error: null }
+  state: State = { error: null }
 
   static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error }
-  }
-
-  componentDidCatch(error: Error, info: React.ErrorInfo) {
-    fetch('/api/v1/client-error', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message: error.message,
-        stack: error.stack,
-        componentStack: info.componentStack,
-        url: window.location.href,
-        timestamp: new Date().toISOString(),
-      }),
-    }).catch(() => {}) // fire-and-forget, never rethrow
+    return { error }
   }
 
   render() {
-    if (this.state.hasError) {
+    if (this.state.error) {
       return (
-        <div style={{ padding: 32, textAlign: 'center', fontFamily: 'monospace' }}>
-          <p>Something went wrong. Please refresh the page.</p>
-          <pre style={{ fontSize: 10, color: '#888' }}>{this.state.error?.message}</pre>
-        </div>
+        <main className="app">
+          <section className="panel" role="alert">
+            <h1>The demo could not render.</h1>
+            <p className="error">{this.state.error.message}</p>
+            <button className="button gold" onClick={() => window.location.reload()}>Reload demo</button>
+          </section>
+        </main>
       )
     }
     return this.props.children

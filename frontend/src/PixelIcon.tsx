@@ -57,7 +57,7 @@ export function PixelIcon({ name, size = 16, color }: { name: string; size?: num
         width={size}
         height={size}
         style={{
-          imageRendering: 'pixelated' as any,
+          imageRendering: 'pixelated',
           display: 'inline-block',
           verticalAlign: 'middle',
           opacity: color === '#333' ? 0.25 : 1,
@@ -72,7 +72,7 @@ export function PixelIcon({ name, size = 16, color }: { name: string; size?: num
   const c = color || icon.color
   const points = parsePixels(icon.pixels)
   return (
-    <svg width={size} height={size} viewBox="0 0 8 8" style={{ imageRendering: 'pixelated' as any, display: 'inline-block', verticalAlign: 'middle' }}>
+    <svg width={size} height={size} viewBox="0 0 8 8" aria-hidden="true" style={{ imageRendering: 'pixelated', display: 'inline-block', verticalAlign: 'middle' }}>
       {points.map(([x, y], i) => (
         <rect key={i} x={x} y={y} width={1} height={1} fill={c} />
       ))}

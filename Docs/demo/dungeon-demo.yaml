@@ -1,9 +1,17 @@
 apiVersion: game.k8s.example/v1alpha1
 kind: Dungeon
 metadata:
-  name: demo-dungeon-kubecon-2026
-  namespace: default
+  name: team-demo
+  namespace: rpg-demo
+  labels:
+    krombat.io/owner: demo
 spec:
-  monsters: 2
-  difficulty: normal
+  monsters: 3
+  difficulty: easy
   heroClass: warrior
+  attackSeq: 0
+  game:
+    heroHP: 200
+    bossHP: 200
+    monsterHP: [30, 30, 30]
+    treasureOpened: 0
