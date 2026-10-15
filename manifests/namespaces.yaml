@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rpg-system
+  labels:
+    app.kubernetes.io/part-of: krombat
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rpg-demo
+  labels:
+    app.kubernetes.io/part-of: krombat

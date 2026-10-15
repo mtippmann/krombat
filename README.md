@@ -111,4 +111,5 @@ resources were deprovisioned.
 
 The original Git remote is still configured but **must not receive these local
 manifests**: its production installation watches that repository. The pre-push
-hook blocks publication. Choose a separate destination explicitly if publishing.
+hook permits only the explicitly approved `mtippmann/krombat` fork (`github`
+remote) and blocks other destinations.

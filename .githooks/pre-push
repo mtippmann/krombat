@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
-echo "This checkout is a local-only demo. Automatic remote pushes are disabled." >&2
-echo "The original remote deploys to AWS; choose a separate destination explicitly." >&2
-exit 1
+case "${2:-}" in
+  git@github.com:mtippmann/krombat.git|https://github.com/mtippmann/krombat.git)
+    exit 0
+    ;;
+  *)
+    echo "Push blocked: only the explicitly approved mtippmann/krombat fork is allowed." >&2
+    echo "The original repository deploys to AWS and must not receive these manifests." >&2
+    exit 1
+    ;;
+esac

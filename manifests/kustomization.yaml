@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespaces.yaml
+  - rbac/rbac.yaml
+  - rgds/loot-graph.yaml
+  - rgds/hero-graph.yaml
+  - rgds/treasure-graph.yaml
+  - rgds/monster-graph.yaml
+  - rgds/boss-graph.yaml
+  - rgds/dungeon-graph.yaml
+  - system/backend.yaml
+  - system/frontend.yaml
+  - system/ingress.yaml
