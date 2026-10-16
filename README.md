@@ -1,6 +1,6 @@
 <div align="center">
   <img src="frontend/public/logo.png" alt="Krombat" width="400">
-  <h1>Krombat: vanilla kro on minikube</h1>
+  <h1>Krombat: vanilla kro on local Kubernetes</h1>
   <p>A pixel-art dungeon and a real Kubernetes resource graph.</p>
 </div>
 
@@ -34,6 +34,52 @@ bash scripts/local.sh deploy
 Open **http://krombat.test** and select **Enter local demo**. Create a warrior
 dungeon, defeat the monsters to unlock the boss, observe its phases, defeat it,
 and open the chest. Delete the dungeon to reset or create another named run.
+
+### Windows: Docker Desktop
+
+Use **Git Bash**, Docker Desktop in **Linux containers** mode, and enable
+Kubernetes in Docker Desktop. Install kubectl, Helm 3, curl, and Python 3
+(`python3` or `python` on PATH). The context is `docker-desktop`; the scripts
+select it explicitly without changing your current kubeconfig context.
+
+```bash
+export KUBECTL_CONTEXT=docker-desktop
+bash scripts/local.sh setup
+```
+
+Setup installs missing upstream kro v0.9.4 and nginx ingress, but never upgrades
+or replaces existing controllers. The pinned ingress-nginx controller is for
+this **local-only demo**, not a new public-facing installation.
+If port 80 is already occupied, resolve the conflict before continuing.
+
+As Administrator, add this line to
+`C:\Windows\System32\drivers\etc\hosts`:
+
+```text
+127.0.0.1 krombat.test
+```
+
+Then, in the same Git Bash session:
+
+```bash
+bash scripts/local.sh build
+bash scripts/local.sh deploy
+bash scripts/local.sh status
+bash tests/run-all.sh
+```
+
+**You do not need to push images.** Build uses your active Docker daemon, which
+must be Docker Desktop. For its kubeadm cluster, Kubernetes uses the local image
+store. For a kind-based Desktop cluster, the script imports the images into each
+node container; enable **Show system containers (advanced)** in Docker Desktop
+if the script cannot access them. Keep the containerd image store enabled for
+kind. No registry, Docker Hub login, or minikube installation is required for
+the Docker Desktop path.
+
+Applications retain `imagePullPolicy: Never`; rebuilding and deploying restarts
+only the two application deployments. Browser tests use the Docker host gateway,
+not Desktop's optional host-networking feature. Windows support must be verified
+on your Docker Desktop machine; it cannot be exercised from a Linux-only checkout.
 
 All players share the explicit `demo` identity. HTTP cookies are signed with a
 locally generated Kubernetes Secret. **This is not public or multi-user
@@ -86,8 +132,8 @@ kubectl --context minikube get rgd -l app.kubernetes.io/part-of=krombat
 
 ## Verify
 
-Build and unit checks run in Docker; integration assertions use explicit
-`kubectl --context minikube`. Browser gameplay journeys interact only through
+Build and unit checks run in Docker; integration assertions use the explicitly
+selected `minikube` or `docker-desktop` context. Browser gameplay journeys interact only through
 the UI. Integration cleanup targets its exact test run, never all dungeons.
 
 ```bash
@@ -103,8 +149,9 @@ effects, second rooms, progression and social features have been removed.
 
 ## Safety
 
-All cluster tools must explicitly select minikube. Deployment and test helpers
-reject other contexts; tests reject URLs other than `http://krombat.test`.
+All cluster tools must explicitly select minikube or docker-desktop.
+Deployment and test helpers default to minikube and reject every other context;
+tests reject URLs other than `http://krombat.test`.
 Existing shared controllers, example graphs and monitoring are not changed.
 AWS deployment source and fork-dependent automation have been retired; no cloud
 resources were deprovisioned.

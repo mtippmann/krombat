@@ -1,7 +1,37 @@
 # Local operations
 
-Every command targets minikube explicitly. Never change the shared current
-context, use a cloud cluster, or remove the shared kro installation.
+The examples below target minikube explicitly. For Docker Desktop, set
+`KUBECTL_CONTEXT=docker-desktop` for scripts and use `--context docker-desktop`
+instead of `--context minikube` in manual commands. Never change the shared
+current context, use a cloud cluster, or remove the shared kro installation.
+
+## Docker Desktop on Windows
+
+Run scripts from Git Bash. Follow the [Windows setup](../README.md#windows-docker-desktop)
+for the explicit setup command and manual Windows hosts-file entry.
+Setup installs only missing controllers; it refuses namespace collisions and
+never upgrades existing installations.
+
+No public image push is needed: kubeadm uses Desktop's local images and kind
+nodes receive an explicit image import. If a kind node cannot be inspected,
+enable **Show system containers (advanced)**. Use the containerd image store
+for kind. Ensure your Docker CLI targets Docker Desktop with Linux containers,
+not a remote daemon or a minikube Docker environment.
+
+For `ErrImageNeverPull`, rerun `build` against the correct Docker daemon and
+then `deploy`. After switching Docker image stores, rebuild: images in the
+previous store are hidden. For `ImagePullBackOff`, inspect which pod failed:
+application images never pull; controller images need internet access.
+
+If localhost port 80 is unavailable, inspect the ingress LoadBalancer service
+and any Windows process already binding that port. Setup checks HTTP connectivity
+but cannot identify an unrelated HTTP server on the same port; deployment's
+application readiness checks are still required. Do not change the game URL or
+expose the demo publicly.
+
+Browser containers map `krombat.test` to Docker's host gateway. If host access
+works but browser tests fail, check Docker Desktop networking and Windows
+firewall permissions for the ingress endpoint. Host networking is not required.
 
 ## Check
 

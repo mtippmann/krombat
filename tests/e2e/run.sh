@@ -2,11 +2,12 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 source tests/helpers.sh
-docker build -f tests/e2e/Dockerfile -t krombat-browser-tests:local .
+check_local_address
+dkr build -f tests/e2e/Dockerfile -t krombat-browser-tests:local .
 output=$(mktemp)
 trap 'rm -f "$output"' EXIT
-docker run --rm --network host -e BASE_URL=http://krombat.test \
-  --add-host "krombat.test:$(minikube -p minikube ip)" \
+browser_network
+dkr run --rm "${BROWSER_NETWORK[@]}" -e BASE_URL=http://krombat.test \
   krombat-browser-tests:local | tee "$output"
 while read -r name; do
   [[ "$name" =~ ^browser-[0-9]+(-hard)?$ ]] || exit 1

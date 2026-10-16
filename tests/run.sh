@@ -2,4 +2,5 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 source tests/helpers.sh
-python3 tests/local-integration.py
+check_local_address
+python_local tests/local-integration.py

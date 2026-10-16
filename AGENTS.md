@@ -1,13 +1,17 @@
 # Krombat local demo
 
-This checkout targets **minikube only**, using unmodified upstream kro v0.9.4.
+This checkout targets **minikube and Docker Desktop only**, using unmodified upstream kro v0.9.4.
 
-- Every kubectl command must explicitly pass `--context minikube`. Scripts must
-  reject other contexts. Never change the shared current kubeconfig context.
+- Every kubectl command must explicitly pass the validated `minikube` or
+  `docker-desktop` context. Scripts reject all others and default to minikube.
+  Never change the shared current kubeconfig context.
 - Never contact the original AWS cluster or public game service, including tests.
-- Build and test applications with Docker; run them in minikube, not host dev servers.
+- Build and test applications with Docker; run them in the selected local cluster,
+  not host dev servers.
 - Reuse the existing kro installation and nginx ingress. Do not upgrade or remove
   shared controllers, existing example graphs, monitoring, or unrelated workloads.
+  Only explicit `scripts/local.sh setup` on docker-desktop may install missing
+  controllers; it must not upgrade or replace existing installations.
 - Go owns turn calculations and writes Dungeon `spec.game`. kro owns projected
   Hero, Monster, Boss, Treasure, Loot, ConfigMap and Secret resources.
 - `rpg-system` contains the applications; `rpg-demo` contains game resources.

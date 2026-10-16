@@ -2,6 +2,12 @@
 
 ## Prepare
 
+For Windows Git Bash with Docker Desktop, follow the
+[setup instructions](../../README.md#windows-docker-desktop), then export
+`KUBECTL_CONTEXT=docker-desktop` before running scripts. Replace
+`--context minikube` with `--context docker-desktop` in the manual examples
+below; never switch the shared current context.
+
 ```bash
 bash scripts/local.sh build
 bash scripts/local.sh deploy

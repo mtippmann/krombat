@@ -9,9 +9,12 @@ import urllib.error
 import urllib.request
 import uuid
 
-assert os.environ.get("KUBECTL_CONTEXT", "minikube") == "minikube"
+CONTEXT = os.environ.get("KUBECTL_CONTEXT", "minikube")
+if CONTEXT not in ("minikube", "docker-desktop"):
+    raise SystemExit("Tests may only use minikube or docker-desktop.")
 BASE = os.environ.get("BASE_URL", "http://krombat.test")
-assert BASE == "http://krombat.test", "Local tests cannot target production"
+if BASE != "http://krombat.test":
+    raise SystemExit("Local tests may only use http://krombat.test.")
 NAME = "check-" + uuid.uuid4().hex[:10]
 PATH = "/api/v1/dungeons/rpg-demo/" + NAME
 client = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
@@ -33,7 +36,7 @@ def api(method, path, body=None, expected=200, authenticated=True):
 
 def kctl(*args):
     return subprocess.check_output(
-        ["kubectl", "--context", "minikube", "-n", "rpg-demo", *args], text=True
+        ["kubectl", "--context", CONTEXT, "-n", "rpg-demo", *args], text=True
     )
 
 
