@@ -107,6 +107,8 @@ performing kro's inventory cleanup.
 
 See [the presentation walkthrough](Docs/demo/DEMO.md) for Radar/k9s commands and
 a repeatable scenario, and [the runbook](Docs/runbook.md) for troubleshooting.
+For a self-paced workshop on kro concepts and small-company platform design,
+see [Docs/workshop](Docs/workshop/README.md).
 
 ## Layout
 
