@@ -40,10 +40,10 @@ bash scripts/local.sh status
 getent ahostsv4 krombat.test
 minikube -p minikube ip
 curl --fail http://krombat.test/
-kubectl --context minikube -n rpg-system get pods
-kubectl --context minikube -n rpg-system logs deployment/rpg-backend --tail=50
-kubectl --context minikube -n kro-system logs deployment/kro --tail=50
-kubectl --context minikube -n rpg-demo get events --sort-by=.lastTimestamp
+kubectl -n rpg-system get pods
+kubectl -n rpg-system logs deployment/rpg-backend --tail=50
+kubectl -n kro-system logs deployment/kro --tail=50
+kubectl -n rpg-demo get events --sort-by=.lastTimestamp
 ```
 
 An nginx 404 before deployment means DNS and ingress connectivity work, but no
@@ -52,10 +52,10 @@ Ingress and service endpoints for routing problems. A 502/503 usually means the
 backend or frontend has not become ready.
 
 ```bash
-kubectl --context minikube -n rpg-system describe ingress krombat
-kubectl --context minikube -n rpg-system get endpointslices
-kubectl --context minikube -n rpg-demo describe dungeon team-demo
-kubectl --context minikube get rgd dungeon-graph -o yaml
+kubectl -n rpg-system describe ingress krombat
+kubectl -n rpg-system get endpointslices
+kubectl -n rpg-demo describe dungeon team-demo
+kubectl get rgd dungeon-graph -o yaml
 ```
 
 The host's `krombat.test` mapping is already configured; deployment does not
@@ -69,10 +69,6 @@ bash scripts/local.sh build
 bash scripts/local.sh deploy
 ```
 
-Images are explicitly loaded into the minikube profile and use
-`imagePullPolicy: Never`. The deploy command restarts only the two game
-deployments so a reused local image tag is picked up.
-
 The deploy helper checks the existing controller image, ownership of its
 namespaces/graphs/CRDs, dependency ordering, graph readiness, app rollouts,
 and ingress response. It generates the session Secret only when missing.
@@ -84,9 +80,9 @@ Prefer **Delete dungeon** in the UI, then create a fresh named dungeon.
 For the documented presentation instance only:
 
 ```bash
-kubectl --context minikube -n rpg-demo delete dungeon team-demo \
+kubectl -n rpg-demo delete dungeon team-demo \
   --ignore-not-found --wait=true
-kubectl --context minikube -n rpg-demo get hero,monster,boss,treasure,loot,cm,secret \
+kubectl -n rpg-demo get hero,monster,boss,treasure,loot,cm,secret \
   -l game.k8s.example/dungeon=team-demo
 ```
 
@@ -100,10 +96,10 @@ finalizer performs ordered pruning. Parent-child identities are available in
 `kro.run/instance-id`, not necessarily `metadata.ownerReferences`.
 
 ```bash
-kubectl --context minikube -n rpg-demo get cm team-demo-hero -o yaml
-kubectl --context minikube -n rpg-demo patch cm team-demo-hero --type=merge \
+kubectl -n rpg-demo get cm team-demo-hero -o yaml
+kubectl -n rpg-demo patch cm team-demo-hero --type=merge \
   -p '{"data":{"hp":"9999"}}'
-kubectl --context minikube -n rpg-demo get cm team-demo-hero -w
+kubectl -n rpg-demo get cm team-demo-hero -w
 ```
 
 Stop the watch after the real hero HP returns. Only edit this explicitly
@@ -115,17 +111,17 @@ First delete each intended Dungeon **by name** and wait for its children to
 disappear. Confirm there are no runs you want to preserve:
 
 ```bash
-kubectl --context minikube -n rpg-demo get dungeons
+kubectl -n rpg-demo get dungeons
 ```
 
 After named runs have been removed, remove only the app/RBAC manifests and the
 six graphs installed by this checkout:
 
 ```bash
-kubectl --context minikube delete -f manifests/system --ignore-not-found
-kubectl --context minikube delete -f manifests/rbac/rbac.yaml --ignore-not-found
-kubectl --context minikube delete -f manifests/rgds --ignore-not-found
-kubectl --context minikube -n rpg-system delete secret krombat-session --ignore-not-found
+kubectl delete -f manifests/system --ignore-not-found
+kubectl delete -f manifests/rbac/rbac.yaml --ignore-not-found
+kubectl delete -f manifests/rgds --ignore-not-found
+kubectl -n rpg-system delete secret krombat-session --ignore-not-found
 ```
 
 Retain the two namespaces unless you have inspected their contents and explicitly

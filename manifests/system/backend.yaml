@@ -23,7 +23,6 @@ spec:
       containers:
         - name: backend
           image: krombat-backend:local
-          imagePullPolicy: Never
           ports:
             - containerPort: 8080
           securityContext:

@@ -20,7 +20,7 @@ If that run already exists, delete it through the UI and recreate it.
 Alternatively apply the fully initialized example:
 
 ```bash
-kubectl --context minikube apply -f Docs/demo/dungeon-demo.yaml
+kubectl apply -f Docs/demo/dungeon-demo.yaml
 ```
 
 Do not reapply that example over a live run: it resets desired HP fields.
@@ -28,7 +28,7 @@ Do not reapply that example over a live run: it resets desired HP fields.
 ## Set up your inspection tool
 
 ```bash
-k9s --context minikube -n rpg-demo
+k9s -n rpg-demo
 ```
 
 In k9s use `:dungeons`, `:monsters`, `:bosses`, `:loots`, `:configmaps`,
@@ -40,7 +40,7 @@ For Radar, use a **minikube-only kubeconfig** so no shared context can be switch
 ```bash
 umask 077
 RADAR_CONFIG=$(mktemp)
-kubectl --context minikube config view --minify --flatten --raw > "$RADAR_CONFIG"
+kubectl config view --minify --flatten --raw > "$RADAR_CONFIG"
 radar --kubeconfig "$RADAR_CONFIG" --listen-address 127.0.0.1
 # After stopping Radar:
 rm "$RADAR_CONFIG"
@@ -88,12 +88,12 @@ Radar's resource details and k9s/YAML as reliable complementary views.
 Useful read-only commands:
 
 ```bash
-kubectl --context minikube get rgd -l app.kubernetes.io/part-of=krombat
-kubectl --context minikube get crd dungeons.game.k8s.example -o yaml
-kubectl --context minikube -n rpg-demo get dungeon team-demo -o yaml
-kubectl --context minikube -n rpg-demo get hero,monster,boss,treasure,loot,cm,secret \
+kubectl get rgd -l app.kubernetes.io/part-of=krombat
+kubectl get crd dungeons.game.k8s.example -o yaml
+kubectl -n rpg-demo get dungeon team-demo -o yaml
+kubectl -n rpg-demo get hero,monster,boss,treasure,loot,cm,secret \
   -l game.k8s.example/dungeon=team-demo
-kubectl --context minikube -n rpg-demo get cm team-demo-hero -o yaml
+kubectl -n rpg-demo get cm team-demo-hero -o yaml
 ```
 
 ## Be explicit about the limits

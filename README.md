@@ -126,8 +126,8 @@ The backend can write Dungeons, but cannot write kro's projected child resources
 
 ```bash
 bash scripts/local.sh status
-kubectl --context minikube -n rpg-demo get dungeons
-kubectl --context minikube get rgd -l app.kubernetes.io/part-of=krombat
+kubectl -n rpg-demo get dungeons
+kubectl get rgd -l app.kubernetes.io/part-of=krombat
 ```
 
 ## Verify
