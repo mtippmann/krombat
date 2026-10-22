@@ -109,6 +109,9 @@ See [the presentation walkthrough](Docs/demo/DEMO.md) for Radar/k9s commands and
 a repeatable scenario, and [the runbook](Docs/runbook.md) for troubleshooting.
 For a self-paced workshop on kro concepts and small-company platform design,
 see [Docs/workshop](Docs/workshop/README.md).
+For authoring these same kro RGDs in CUE and packaging them with Timoni
+without Helm, see [Docs/timoni](Docs/timoni/README.md). The companion module
+preserves kro graph execution and is validated offline only.
 
 ## Layout
 
@@ -119,6 +122,7 @@ see [Docs/workshop](Docs/workshop/README.md).
 | `manifests/rgds/` | Six upstream-compatible resource graphs |
 | `manifests/system/` | One backend, one frontend and nginx ingress |
 | `manifests/rbac/` | Namespace-scoped API permissions |
+| `timoni/krombat/` | CUE-authored versions of all six RGDs, packaged by Timoni |
 | `scripts/local.sh` | Local image build/load, staged deploy, status |
 | `tests/` | Local-only guardrails, API/graph assertions and browser journey |
 
