@@ -62,13 +62,13 @@ reconciliation as a transactional guarantee.
 
 ## 03 - Platform design review
 
-There is no single right recommendation. Strong responses:
+A technical comparison can:
 
 - select a recurring composition problem with enough repetition to justify an
   API abstraction;
 - define a narrow, comprehensible interface with safe defaults and useful
   constraints;
-- identify the team responsible for API evolution, controller failures,
+- identify ownership of API evolution, controller failures,
   cleanup, documentation, permissions, and support;
 - account for tenant isolation, resource quotas, secret handling, observability,
   version compatibility, and rollback;

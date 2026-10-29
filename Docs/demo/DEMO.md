@@ -1,4 +1,4 @@
-# Team presentation: a game as a resource graph
+# Presentation: a game as a resource graph
 
 ## Prepare
 
@@ -25,7 +25,7 @@ kubectl apply -f Docs/demo/dungeon-demo.yaml
 
 Do not reapply that example over a live run: it resets desired HP fields.
 
-## Set up your inspection tool
+## Set up an inspection tool
 
 ```bash
 k9s -n rpg-demo

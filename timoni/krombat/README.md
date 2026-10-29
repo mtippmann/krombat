@@ -62,7 +62,7 @@ The active YAML remains unchanged and is still used by `scripts/local.sh`.
 
 ```cue
 values: {
-	graphLabels: "platform.example/team": "workshop"
+	graphLabels: "platform.example/component": "graphs"
 	dungeonDefaults: {
 		monsters:   5
 		difficulty: "normal"

@@ -29,8 +29,7 @@ also refer to graph resources such as `hero`, `monsters`, or `config`.
 2. Which values constrain Dungeon creation, and which values are observed
    outputs?
 3. Why are schema defaults and bounds useful in a platform API? What
-   assumptions or compatibility concerns would arise if the platform team
-   changed one?
+   assumptions or compatibility concerns would arise if one changed?
 4. Which status fields summarize other graph resources rather than simply
    echoing input?
 

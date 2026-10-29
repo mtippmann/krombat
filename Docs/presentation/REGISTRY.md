@@ -1,12 +1,12 @@
 # Optional: publishing and pinning a module
 
-The 10-minute talk mentions OCI module distribution. This optional page
+The 15-minute talk mentions OCI module distribution. This optional page
 expands on publishing and digest pinning for the small
 [presentation example](example/README.md).
 
 These commands are **illustrative and were not executed**. Replace
-`example.azurecr.io` with an authorized registry and authenticate using the
-team's established credential process.
+`example.azurecr.io` with an authorized registry and authenticate using its
+supported credential process.
 
 From the repository root:
 

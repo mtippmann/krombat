@@ -1,8 +1,8 @@
-# Easier kro RGD authoring with CUE and Timoni
+# Authoring kro RGDs with CUE and Timoni
 
-**The goal is to maintain kro graphs more easily, not replace kro.**
-Krombat stays a kro game. The CUE module authors the same six RGDs, and
-Timoni provides their package/release lifecycle without Helm.
+CUE defines the six kro ResourceGraphDefinitions used by Krombat.
+Timoni builds, validates and packages those definitions; kro generates
+their APIs and reconciles the resource graphs.
 
 ```text
 Platform author
@@ -51,7 +51,7 @@ The existing YAML/deployment scripts and running demo are not changed.
 Do not apply this prototype over the existing graphs or publish it to the
 original remote.
 
-## What improves for a platform team
+## Shared structure and validation
 
 | Maintenance task | CUE/Timoni approach in this example |
 |---|---|
@@ -129,11 +129,10 @@ support multi-cluster configuration. Secrets can be supplied through
 Kubernetes, CI, SOPS or 1Password workflows. Bundle update policies, GitHub
 Actions and agent tooling help automate authoring and releases.
 
-These features are separate from kro's graph execution. For a first company
-pilot, evaluate the concrete RGD authoring/review loop and Helm-free release
-boundary first; add Flux, runtime injection or multi-cluster delivery only
-when required. See [the delivery guide](lifecycle.md) for the distinction
-between direct Timoni lifecycle and Flux-managed rendered manifests.
+These capabilities have separate roles: CUE defines graph structure,
+Timoni manages module builds and CLI releases, Runtime supplies external
+inputs, and Flux can reconcile rendered manifests. See [the delivery
+guide](lifecycle.md) for the execution and ownership boundaries.
 
 ## Hands-on track
 

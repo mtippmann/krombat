@@ -7,7 +7,7 @@ package main
 
 // Offline teaching contract. The module URL is deliberately a placeholder.
 bundle: {
-	_replicas: int    @timoni(runtime:number:DEMO_REPLICAS)
+	_replicas: number @timoni(runtime:number:DEMO_REPLICAS)
 	_token:    string @timoni(runtime:string:DEMO_TOKEN)
 
 	apiVersion: "v1alpha1"

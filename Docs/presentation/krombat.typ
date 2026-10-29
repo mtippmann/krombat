@@ -19,7 +19,7 @@
 
 #let deck = (
   (
-    seconds: 40,
+    seconds: 45,
     title: "Timoni + CUE, alongside Flux",
     body: [
       #text(size: 21pt, weight: "bold", fill: accent)[Author → render → reconcile]
@@ -32,7 +32,7 @@
         [Flux], [Continuously reconcile desired state in Kubernetes.],
       )
       #v(12pt)
-      What changes when configuration has an explicit *contract*?
+      Contracts describe allowed inputs before resources are rendered.
     ],
     refs: (
       source("https://timoni.sh/concepts", "Timoni"),
@@ -44,16 +44,17 @@
       Timoni uses it to build and package Kubernetes objects. Kustomize transforms
       existing objects through bases, patches and other operations. Flux
       continuously reconciles declared state in the cluster. These responsibilities
-      can be combined in a delivery pipeline. Our question is what an explicit
-      configuration contract adds. We will use one replica count to explain
-      constraints and composition, then apply the idea to a small kro API.
+      can be combined in a delivery pipeline. An explicit configuration contract
+      describes which inputs are allowed before resources are rendered. A single
+      replica count illustrates constraints and composition, followed by a small
+      kro API and external values supplied through Timoni Runtime.
     ],
   ),
   (
-    seconds: 40,
+    seconds: 45,
     title: "CUE’s creator: Marcel van Lohuizen",
     body: [
-      - Member of the founding *Borg* team at Google.
+      - Founding contributor to *Borg* at Google.
       - Created *BCL*, the Borg Configuration Language, later generalized into GCL.
       - Created *CUE*, drawing on experience with large configurations.
       #v(18pt)
@@ -68,20 +69,20 @@
       source("https://cuelang.org/docs/introduction/", "CUE history"),
     ),
     notes: [
-      Marcel van Lohuizen created CUE. At Google he was on the founding Borg
-      team, where he created the Borg Configuration Language and core tooling.
+      Marcel van Lohuizen created CUE. At Google he was a founding contributor
+      to Borg, where he created the Borg Configuration Language and core tooling.
       BCL was later generalized into GCL. CUE is a different language informed
       by that experience. Its design returns to constraint composition and graph
-      unification. The useful connection for us: configuration can carry allowed
+      unification. The technical connection: configuration can carry allowed
       values and reusable structure in the same language. The next two slides
       explain that model with small examples.
     ],
   ),
   (
-    seconds: 80,
+    seconds: 90,
     title: "Types and values share one model",
     body: [
-      Think of a constraint as a *set of allowed values*.
+      A constraint describes a *set of allowed values*.
       #v(8pt)
       ```cue
       replicas: *2 | (int & >=1 & <=10)
@@ -119,7 +120,7 @@
     ],
   ),
   (
-    seconds: 70,
+    seconds: 90,
     title: "Composition means satisfying both",
     body: [
       #pair(
@@ -171,7 +172,7 @@
     ],
   ),
   (
-    seconds: 70,
+    seconds: 90,
     title: "Transform YAML or constrain inputs",
     body: [
       #pair(
@@ -216,7 +217,7 @@
       to the Deployment's replica count.
 
       Now change the input to zero. Kustomize can render zero, which is a valid
-      Kubernetes replica count. It does not encode our example's minimum of one.
+      Kubernetes replica count. It does not encode this example's minimum of one.
       CUE rejects zero because that minimum is part of the module's contract.
       This shows where the rule is expressed: schema tools, policies and CI
       checks can also accompany Kustomize. Both approaches reuse configuration.
@@ -226,7 +227,7 @@
     ],
   ),
   (
-    seconds: 70,
+    seconds: 75,
     title: "Timoni packages CUE modules",
     body: [
       - *Interface:* values, defaults and constraints in a module.
@@ -255,7 +256,7 @@
       is explicit schema integration: a CUE file alone does not automatically
       know every Kubernetes API.
 
-      The first command renders our local WebApp RGD module. The second runs
+      The first command renders the local WebApp RGD module. The second runs
       module validation against its included schema. These local commands do
       not contact Kubernetes. Timoni can package CUE sources and included schemas
       as a versioned OCI artifact; consumers build it with their own values.
@@ -267,7 +268,7 @@
     ],
   ),
   (
-    seconds: 80,
+    seconds: 90,
     title: "Use shared CUE structure for a kro API",
     body: [
       #pair(
@@ -331,105 +332,255 @@
     ],
   ),
   (
-    seconds: 90,
-    title: "Where Bicep values meet Kubernetes",
+    seconds: 60,
+    title: "External values and Flux substitution",
     body: [
-      #panel("Existing infrastructure handoff", [
+      #panel("Flux delivery pattern", [
         #callout[#align(center)[Bicep / CI → ConfigMaps / Secrets → Flux → Kubernetes]]
       ])
       #v(10pt)
-      #panel("Timoni Runtime → typed Bundle inputs · excerpt (separate CLI step)", [
+      #pair(
+        panel("Flux Kustomization.spec · excerpt", [
+          ```yaml
+          postBuild:
+            substituteFrom:
+            - kind: ConfigMap
+              name: infra-values
+            - kind: Secret
+              name: infra-secrets
+          ```
+        ]),
+        panel("Consumer validation", [
+          - Flux substitutes values after the Kustomize build.
+          - CUE checks concrete input values against a contract.
+          - Runtime can read cluster values into a Timoni Bundle.
+        ]),
+      )
+      #v(8pt)
+      #text(size: 14pt)[Validate producer outputs or resolve inputs before checking the consumer contract.]
+    ],
+    refs: (
+      source("https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/outputs", "Bicep outputs"),
+      source("https://fluxcd.io/flux/components/kustomize/kustomizations/#post-build-variable-substitution", "Flux substitution"),
+      source("example-runtime/README.md", "Values handoff"),
+    ),
+    notes: [
+      Infrastructure outputs can enter Kubernetes as ConfigMaps and Secrets,
+      published by Bicep or CI. Flux's substituteFrom reads those objects after
+      Kustomize has built the manifests. This diagram illustrates one delivery
+      pattern; the object names and values are synthetic.
+
+      Bicep can type its outputs, while ConfigMap data is string-valued. The
+      consumer still needs to establish the intended type and any additional
+      rules. A replica count might need to be an integer from one to ten.
+
+      CUE can validate producer outputs before publication, or check consumer
+      inputs once they are resolved. Checking an earlier placeholder cannot
+      validate a value inserted later by Flux. Timoni Runtime provides another
+      input path: an explicit CLI step reads cluster objects and binds values
+      into a Bundle. The next slides follow the lookup, binding and contract
+      checks in that path. Flux's substitution and reconciliation remain a
+      separate execution model.
+    ],
+  ),
+  (
+    seconds: 90,
+    title: "Runtime selects resources and fields",
+    body: [
+      #panel("Runtime queries · excerpt from runtime.cue", [
         ```cue
+        runtime: values: [{
+          query: "k8s:v1:ConfigMap:demo:infra-values"
+          for: "DEMO_REPLICAS": "obj.data.replicas"
+        }, {
+          query: "k8s:v1:Secret:demo:infra-secrets"
+          for: "DEMO_TOKEN": "obj.data.token"
+        }]
+        ```
+      ])
+      #v(10pt)
+      - `query`: API version, kind, namespace and object name.
+      - `for`: named input → expression selecting a field.
+      - Bundle attributes choose how each input is parsed.
+      #v(10pt)
+      #callout[#text(size: 14pt)[Object field → named Runtime input → typed Bundle value]]
+    ],
+    refs: (
+      source("https://timoni.sh/bundle-runtime", "Runtime queries and mappings"),
+      source("example-runtime/runtime.cue", "Complete runtime.cue"),
+    ),
+    notes: [
+      A Runtime definition declares which resources to read and how their fields
+      map to named inputs. Read the first query from left to right: Kubernetes
+      API v1, ConfigMap, namespace demo, object infra-values. Its for mapping
+      evaluates obj.data.replicas and exposes the result as DEMO_REPLICAS.
+      The second query selects the token field from a Secret and names the input
+      DEMO_TOKEN. These names connect the Runtime to the Bundle.
+
+      The mapping expressions select concrete field values. A ConfigMap can hold
+      the text three; selecting that field does not yet establish the consumer's
+      integer range. The Bundle's attributes specify parsing, and CUE constraints
+      establish the consumer contract on the following slide. A similar mapping
+      can select other scalar fields from Kubernetes resources.
+
+      The complete runtime.cue also supplies API metadata and explicitly selects
+      the minikube context. Those fields are omitted from this query excerpt.
+      Runtime reads happen when the CLI is invoked. A later change to a ConfigMap
+      requires another execution to refresh the inputs. The offline example uses
+      environment variables with the same names, allowing contract checks without
+      Kubernetes API access.
+    ],
+  ),
+  (
+    seconds: 105,
+    title: "Bundle inputs: bind, then constrain",
+    body: [
+      #panel("bundle.cue · contract, bindings and instance values (metadata omitted)", [
+        ```cue
+        #InfraValues: {
+          replicas: int & >=1 & <=10
+          token:    string & !=""
+        }
         bundle: {
-          _replicas: int    @timoni(runtime:number:DEMO_REPLICAS)
+          _replicas: number @timoni(runtime:number:DEMO_REPLICAS)
           _token:    string @timoni(runtime:string:DEMO_TOKEN)
-          instances: web: values: {
-            replicas: int & >=1 & <=10 & _replicas
-            token:    string & !="" & _token
+          instances: web: values: #InfraValues & {
+            replicas: _replicas
+            token:    _token
           }
         }
         ```
       ])
       #v(8pt)
-      #text(size: 14pt)[`"3"` → integer `3`; `0`, `"three"` or an empty token → *error*.]
+      #callout[#text(size: 14pt)[Parse Runtime inputs → unify with the contract → supply module values]]
     ],
     refs: (
-      source("https://fluxcd.io/flux/components/kustomize/kustomizations/#post-build-variable-substitution", "Flux substitution"),
-      source("https://timoni.sh/bundle-runtime", "Timoni Runtime"),
-      source("example-runtime/README.md", "Offline handoff example"),
+      source("https://timoni.sh/bundle", "Bundles"),
+      source("https://timoni.sh/bundle-runtime", "Runtime bindings"),
+      source("https://cuelang.org/docs/tour/references/hidden/", "Hidden fields"),
+      source("example-runtime/bundle.cue", "Complete bundle.cue"),
     ),
     notes: [
-      Start with the team's handoff: Bicep or CI publishes ConfigMaps and Secrets;
-      Flux's substituteFrom reads their values after Kustomize builds. The code
-      outlines a separate consumer validation step.
+      A Bundle declares module instances and their input values. This excerpt
+      shows three distinct parts. First, `#InfraValues` is the reusable consumer
+      contract: replicas must be an integer from one to ten, and token must be a
+      nonempty string. The complete file also declares the Bundle's API version,
+      name, module URL, module version and target namespace.
 
-      A Bundle groups module instances. Runtime maps ConfigMap replicas to
-      DEMO_REPLICAS and Secret token to DEMO_TOKEN. Attributes parse a number and
-      a string into hidden fields. The consuming values then unify these inputs
-      with an integer range, one to ten, and a nonempty-string contract. Keep the
-      constraints at the consuming fields, separate from injection. The complete
-      example factors them into `#InfraValues`; Bundle metadata, module reference
-      and namespace are omitted here.
+      Second, the Timoni attributes bind the named Runtime inputs. The number
+      attribute parses `DEMO_REPLICAS` as a CUE number; the string attribute retains
+      `DEMO_TOKEN` as text. The underscore fields hold those inputs separately from
+      the values supplied to the module. They are hidden CUE fields and are not
+      exported as application configuration.
 
-      Trace one input: ConfigMap string three becomes integer three. Zero, a
-      fraction, nonnumeric input or an empty or missing token fails validation.
-      CUE needs concrete values: checking a placeholder cannot validate a later
-      Flux substitution. Bicep's typed outputs do not carry this consumer contract.
+      Third, `values` unifies `#InfraValues` with the concrete bindings. Text three
+      from the ConfigMap becomes number three, then satisfies the integer range.
+      Zero parses as a number but conflicts with the minimum. A fraction parses
+      as a number but fails the integer requirement. Nonnumeric text fails at
+      parsing, and an empty token conflicts with the nonempty-string constraint.
 
-      Timoni Runtime is an explicitly invoked CLI step. Flux does not run it
-      automatically; input changes need to trigger it again. Keeping Flux and
-      validating producer outputs before publishing is another option. The linked
-      example checks synthetic inputs offline.
+      The distinction between parsing and the consumer contract matters. Keep
+      the constraints on the consumed values, separate from Runtime injection.
+      The same named contract can be reused with other input sources. Building
+      the referenced module then checks its own interface and resource schemas;
+      this local Bundle check does not fetch that placeholder module.
     ],
   ),
   (
-    seconds: 60,
-    title: "Choose the abstraction you need",
+    seconds: 75,
+    title: "Check the contract offline",
+    body: [
+      #panel("From example-runtime/ · synthetic inputs", [
+        ```sh
+        DEMO_REPLICAS=3 DEMO_TOKEN=demo-only \
+          timoni bundle vet -f bundle.cue -r runtime.cue \
+          --offline --kube-context=minikube
+        ```
+      ])
+      #v(8pt)
+      #table(
+        columns: (1.4fr, 1.6fr), inset: 5pt,
+        table.header([*Input*], [*Contract result*]),
+        [Replicas `"3"`, nonempty token], [Accept integer `3` and token],
+        [Replicas `0`, `11`, `3.5` or `three`], [Reject range, type or parsing],
+        [Empty or missing token], [Reject required string],
+      )
+      #v(8pt)
+      #text(size: 14pt)[Runtime reads on invocation. Input changes need a new run; Flux reconciles separately.]
+    ],
+    refs: (
+      source("https://timoni.sh/bundle-runtime", "Offline Runtime inputs"),
+      source("https://timoni.sh/gitops-flux", "Timoni and Flux"),
+      source("example-runtime/README.md", "Reproduce the checks"),
+    ),
+    notes: [
+      Offline mode supplies Runtime inputs from environment variables instead
+      of querying Kubernetes. The variable names match the Bundle attributes.
+      With replicas three and a nonempty dummy token, bundle vet succeeds.
+      The same contract rejects zero, eleven, fractions and nonnumeric text.
+      Missing replicas, a missing token and an empty token also fail.
+
+      These failures happen at different layers: nonnumeric text cannot be
+      parsed as a number, a fraction conflicts with int, and zero conflicts with
+      the minimum. This separation makes the input boundary explicit.
+
+      Bundle vet checks this Bundle and its concrete contract. The module URL
+      in the example is a placeholder; module builds and resource-schema checks
+      are separate. The command is an offline validation step and applies nothing.
+
+      Runtime is executed by the CLI, so changed source values need a new run.
+      Flux's documented templating workflow delivers rendered manifests and
+      does not automatically invoke Runtime injection. A pipeline can resolve,
+      validate and render inputs before handing manifests to Flux, provided it
+      defines when that pipeline runs. The prepared checks demonstrate input
+      validation; they do not implement that delivery pipeline.
+    ],
+  ),
+  (
+    seconds: 45,
+    title: "Capabilities and operating requirements",
     body: [
       #pair(
-        panel("What CUE + Timoni offer", [
-          - Explicit, reusable configuration contracts.
-          - Constraint composition and errors before deployment.
-          - Modules with schema checks and OCI distribution.
+        panel("Capabilities", [
+          - Reusable CUE contracts and composition.
+          - Module builds and vendored schema checks.
+          - OCI modules and Runtime value binding.
         ]),
-        panel("What the team takes on", [
-          - CUE's model and error diagnostics.
-          - Module, schema and toolchain maintenance.
-          - Validation at the external-values handoff.
+        panel("Operating requirements", [
+          - CUE, schema and toolchain maintenance.
+          - Concrete inputs at the validation boundary.
+          - A trigger for each Runtime execution.
         ]),
       )
       #v(14pt)
-      #callout[Use Kustomize for straightforward transformations. Consider CUE when shared rules need to compose.]
+      #callout[Timoni builds and applies when invoked; Flux continuously reconciles.]
       #v(12pt)
       #text(size: 11pt)[
-        Try it: #link("example/README.md")[Deployment] ·
+        Examples: #link("example/README.md")[Deployment] ·
         #link("example-kustomize/README.md")[Kustomize comparison] ·
-        #link("example-rgd/README.md")[WebApp RGD]
+        #link("example-rgd/README.md")[WebApp RGD] ·
+        #link("example-runtime/README.md")[Runtime inputs]
       ]
     ],
     refs: (),
     notes: [
-      Close on the tradeoff. CUE lets configuration authors express reusable
-      structure and contracts together. Unification combines compatible rules
-      and exposes contradictions during evaluation. Timoni turns that language
-      into modules, schema integration and a Kubernetes packaging workflow.
-      These benefits come with a language to learn, diagnostics to understand,
-      and schemas and toolchains to maintain.
+      CUE combines reusable structure with constraints. Timoni adds modules,
+      schema integration, OCI packaging and explicit CLI execution. Runtime
+      binds external values before module evaluation. These capabilities require
+      maintained interfaces, schemas and an execution trigger when inputs change.
 
-      Kustomize remains a good fit for straightforward transformations, especially
-      when existing validation already covers the required policies. Flux can
-      continue reading infrastructure values and reconciling resources. CUE is
-      most interesting when several sources of shared structure and rules must
-      compose reliably. The README links offline output comparisons, the
-      runtime-input contract and additional study material. Finish at ten
-      minutes and invite questions afterward.
+      Kustomize provides object transformations; Flux continuously reconciles
+      declared state. Their validation and execution responsibilities can be
+      combined with CUE and Timoni in a delivery workflow. The linked examples
+      cover rendering, composition, a kro API and Runtime contracts. Finish at
+      fifteen minutes; questions follow the talk.
     ],
   ),
 )
 
 #let total-seconds = deck.map(slide => slide.seconds).sum()
-#assert(deck.len() == 9, message: "The talk must contain nine slides.")
-#assert(total-seconds == 600, message: "The speaking plan must total 10:00.")
+#assert(deck.len() == 12, message: "The talk must contain twelve slides.")
+#assert(total-seconds == 900, message: "The speaking plan must total 15:00.")
 #let stamp(s) = str(calc.floor(s / 60)) + ":" + (if calc.rem(s, 60) < 10 { "0" } else { "" }) + str(calc.rem(s, 60))
 
 #set text(font: "Fira Sans", fill: ink)
@@ -458,7 +609,7 @@
     start += slide.seconds
   }
   context {
-    assert(counter(page).final().first() == deck.len(), message: "Speaker notes must occupy exactly nine pages.")
+    assert(counter(page).final().first() == deck.len(), message: "Speaker notes must occupy exactly twelve pages.")
   }
 } else {
   show: diatypst-slides.with(
@@ -486,6 +637,6 @@
     }
   }
   context {
-    assert(counter(page).final().first() == deck.len(), message: "Slide overflow: expected exactly nine PDF pages.")
+    assert(counter(page).final().first() == deck.len(), message: "Slide overflow: expected exactly twelve PDF pages.")
   }
 }

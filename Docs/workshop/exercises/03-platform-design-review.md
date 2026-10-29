@@ -1,14 +1,13 @@
 # 03 - Platform design review
 
-**Goal:** Decide whether the patterns in this game belong in a small company's
-internal platform, and identify the conditions required to use them safely.
+**Goal:** Compare kro resource-composition patterns, API boundaries and
+operating requirements using the local resource graph.
 This is a design exercise; it does not ask you to modify code or deploy
 resources.
 
-Assume a small company has a platform team of a few engineers and product teams
-that need repeatable environments. The company already runs Kubernetes and
-wants a self-service API that composes an application with supporting
-resources. Use the current game as a reference, not as a production template.
+Consider a Kubernetes API that composes an application and its supporting
+resources. Use the current game to examine composition, constraints, status
+and reconciliation. Its local implementation provides the reference behavior.
 
 ## Activity A - Find the transferable pattern
 
@@ -29,25 +28,24 @@ Map the capability to the game:
 | Where are repetition and conditional inclusion represented? | |
 | What shows that the desired state has converged? | |
 
-## Activity B - Make an adoption recommendation
+## Activity B - Compare capabilities and operating models
 
-Write a short recommendation to the engineering manager. Include:
+Write a technical comparison. Include:
 
-1. **Use case:** What recurring platform problem would an RGD solve better
-   than asking every team to assemble resources themselves?
+1. **Use case:** Which recurring composition rules can an RGD express
+   through a single API?
 2. **Abstraction boundary:** Which decisions should platform users control,
    and which defaults or constraints should the platform own?
-3. **Complexity test:** What would make an RGD simpler than the team's current
-   templates or deployment workflow? What would make it unnecessary
-   indirection?
+3. **Complexity:** Which repeated structure can an RGD centralize?
+   Which indirection and dependencies does that abstraction introduce?
 4. **Operations:** Who owns RGD changes, compatibility, observability,
    reconciliation failures, cleanup, and support?
 5. **Risk:** What isolation, authorization, quotas, secrets handling, and
    versioning would need review before production use?
 6. **Alternative:** When would a Helm chart, an existing GitOps workflow, or
    a purpose-built operator be more appropriate?
-7. **Decision:** Recommend a small pilot, defer adoption, or use a different
-   approach. State one measurable signal that would change your decision.
+7. **Evidence:** Which observed behavior supports the comparison, and
+   which capabilities would require additional validation?
 
 ## Activity C - State the boundary accurately
 
@@ -59,14 +57,12 @@ Complete these statements in your own words:
 - The CEL playground is useful for ..., but it does not ...
 - This game is a poor example for teaching ...
 
-Avoid proposing that a production company place high-throughput application
-state in Kubernetes just because this game stores desired game state in a
-custom resource. The demo's local shared identity and HTTP endpoint are not
-security patterns to copy.
+The game stores desired state in a custom resource to demonstrate resource
+composition and reconciliation. High-throughput application storage,
+production authentication and transport security require separate designs.
 
 ## Deliverable
 
-Submit a one-page recommendation or a short verbal review. A strong answer
-connects an observed RGD pattern to a real platform need, names the costs and
-owners, and makes a bounded recommendation rather than advocating kro by
-default.
+Submit a one-page technical comparison or a short verbal review.
+Connect observed RGD behavior to an API capability, describe its
+operating requirements, and compare it with alternative mechanisms.

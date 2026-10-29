@@ -57,8 +57,8 @@ Compare with direct Timoni `apply`:
 2. Which tool evaluates the RGD's `forEach`, `includeWhen`, `readyWhen` and CEL?
 3. Which artifact is source/configuration versus rendered manifests?
 4. Why should neither release pipeline enforce current HP on active Dungeons?
-5. Which future health/compatibility checks would you require before adopting
-   this for a company platform API?
+5. Which health and compatibility checks establish that a graph release
+   is ready for use as a platform API?
 
 ## Deliverable
 

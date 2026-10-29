@@ -1,9 +1,9 @@
-# Bicep → Flux: validate values at the handoff
+# External values: Flux substitution and Timoni Runtime
 
-This example supports slide 8. The team described a workflow in which
-Bicep or CI creates ConfigMaps/Secrets and Flux reads their values.
-The names, fields and token in this teaching example are synthetic.
-No company infrastructure definitions or actual cluster values were read.
+This example accompanies slides 8–11. It illustrates a Bicep/CI →
+ConfigMaps/Secrets → Flux delivery pattern and a separate Timoni Runtime
+path for binding external values to a CUE consumer contract. Object names,
+fields and tokens are synthetic.
 
 ```mermaid
 flowchart LR
@@ -12,7 +12,8 @@ flowchart LR
     F --> K[Kubernetes resources]
 ```
 
-Flux resolves `substituteFrom` against objects in the Flux Kustomization's
+Flux's [post-build substitution](https://fluxcd.io/flux/components/kustomize/kustomizations/#post-build-variable-substitution)
+resolves `substituteFrom` against objects in the Flux Kustomization's
 namespace and substitutes values after Kustomize builds its manifests.
 ConfigMap data is string-valued; the consuming field may need an integer,
 boolean or a more specific string contract. Bicep's typed outputs do not
@@ -20,31 +21,76 @@ automatically carry a CUE contract across that boundary.
 
 ## Where validation can run
 
-- **Retain Flux's value resolution:** validate Bicep/CI outputs against a
+- **Flux substitution:** validate Bicep/CI outputs against a
   consumer contract before publishing them, or check the resolved consumer
   input after substitution. A CUE check of an earlier placeholder does not
   validate the concrete value Flux inserts later.
-- **Use Timoni Runtime:** explicitly run a CLI step that reads the cluster
+- **Timoni Runtime:** explicitly run a CLI step that reads the cluster
   objects into typed Bundle inputs. The module can then validate and render
   with concrete values. Flux does not invoke Timoni Runtime automatically.
   If an extra render step is introduced, changes to the source values must
   trigger that step again; it is not a continuous watcher by itself.
 
-The runtime files below demonstrate the second mechanism offline. They
-are not a replacement deployment or an implementation of either design.
+The files below demonstrate Runtime query mappings and input contracts
+using offline validation.
 
-## Try the contract offline
+## 1. Select resources and map their fields
 
-[runtime.cue](runtime.cue) declares a ConfigMap query for `DEMO_REPLICAS`
-and a Secret query for `DEMO_TOKEN`. [bundle.cue](bundle.cue) binds runtime
-inputs to separate fields, then unifies the consumed values with
-`#InfraValues`: an integer from 1 to 10 and a nonempty string.
+[Timoni Runtime](https://timoni.sh/bundle-runtime) uses queries to select
+Kubernetes resources and `for` mappings to expose named inputs. This
+excerpt from [runtime.cue](runtime.cue) selects two fields:
 
-Slide 8's [CUE excerpt](../krombat.typ) writes those constraints directly
-on the consuming `values` fields. `_replicas` and `_token` hold Runtime
-inputs; `&` combines each with its consumer contract. The excerpt omits
-Bundle metadata, the module reference and namespace. The complete file
-above includes them and reuses the named `#InfraValues` contract.
+```cue
+runtime: values: [{
+  query: "k8s:v1:ConfigMap:demo:infra-values"
+  for: "DEMO_REPLICAS": "obj.data.replicas"
+}, {
+  query: "k8s:v1:Secret:demo:infra-secrets"
+  for: "DEMO_TOKEN": "obj.data.token"
+}]
+```
+
+The query identifies the API version, kind, namespace and object name.
+Each mapping pairs a Runtime input name with an expression selecting a
+field from `obj`. The complete file also declares the Runtime metadata
+and explicitly selects the `minikube` context. The slide omits those
+fields to focus on the queries.
+
+## 2. Bind the inputs and apply a consumer contract
+
+A [Bundle](https://timoni.sh/bundle) declares module instances and their
+values. The excerpt from [bundle.cue](bundle.cue) separates the reusable
+contract, Runtime bindings and consumed values:
+
+```cue
+#InfraValues: {
+  replicas: int & >=1 & <=10
+  token:    string & !=""
+}
+bundle: {
+  _replicas: number @timoni(runtime:number:DEMO_REPLICAS)
+  _token:    string @timoni(runtime:string:DEMO_TOKEN)
+  instances: web: values: #InfraValues & {
+    replicas: _replicas
+    token:    _token
+  }
+}
+```
+
+The attributes bind named inputs to hidden fields. `runtime:number`
+parses a CUE number; `runtime:string` preserves text. The consuming
+`values` then unify those inputs with `#InfraValues`: an integer from
+1 to 10 and a nonempty string. Keeping the constraints at the consumer
+separates parsing from contract validation. The [hidden fields](https://cuelang.org/docs/tour/references/hidden/)
+hold intermediate inputs and are not exported as application configuration.
+
+For example, ConfigMap text `"3"` becomes number `3` and satisfies the
+contract. A fraction parses as a number but conflicts with `int`; `0`
+conflicts with the range; `three` fails number parsing. An empty token
+conflicts with the nonempty-string constraint. The complete Bundle also
+declares its API version, name, module reference and namespace.
+
+## 3. Check the contract offline
 
 From this directory:
 
@@ -80,6 +126,19 @@ Checked with Timoni 0.35.0 / embedded CUE 0.17.1. No registry, Azure or
 Kubernetes API was contacted. The offline input checks establish the
 contract behavior, not live lookup or change propagation.
 
+## Execution and reconciliation
+
+Runtime reads values when its CLI step runs. A source-object change needs
+another execution to refresh the inputs. A pipeline can resolve inputs,
+check the contract and build manifests before delivering them to Flux.
+The trigger for that pipeline is a separate configuration decision.
+
+The [Timoni/Flux guide](https://timoni.sh/gitops-flux) describes delivery
+of rendered manifests. Flux does not automatically invoke Runtime
+injection. These examples establish the lookup definition and offline
+contract behavior; they do not implement a continuously triggered
+delivery pipeline.
+
 ## Delivering kro expressions through Flux
 
 Flux substitution and kro CEL both use `${…}` syntax. For an RGD that
@@ -92,8 +151,5 @@ Disabling substitution for the whole object also disables any intended
 Bicep-derived substitutions in it. This handling belongs in the delivery
 step; the existing offline RGD example emits ordinary, unescaped CEL.
 
-Sources: [Bicep outputs](https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/outputs),
-[Flux substitution](https://fluxcd.io/flux/components/kustomize/kustomizations/#post-build-variable-substitution),
-[ConfigMap data](https://kubernetes.io/docs/concepts/configuration/configmap/),
-[Timoni Runtime](https://timoni.sh/bundle-runtime) and
-[the Timoni/Flux integration boundary](https://timoni.sh/gitops-flux).
+Additional references: [Bicep outputs](https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/outputs)
+and [ConfigMap data](https://kubernetes.io/docs/concepts/configuration/configmap/).

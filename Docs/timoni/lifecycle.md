@@ -1,8 +1,8 @@
 # Helm-free lifecycle: Timoni delivers, kro reconciles
 
-The company adoption question is not "CUE instead of kro." It is "CUE for
-readable, reusable graph authoring; Timoni for versioned releases; kro for
-the platform API and its runtime graph."
+CUE defines reusable graph structure and constraints. Timoni builds and
+packages versioned modules. kro generates the Kubernetes API and
+reconciles each instance's resource graph.
 
 ## Keep three lifecycles separate
 
@@ -32,7 +32,7 @@ For this graph module:
 
 ```cue
 values: {
-	graphLabels: "platform.example/team": "workshop"
+	graphLabels: "platform.example/component": "graphs"
 	dungeonDefaults: {
 		monsters:   5
 		difficulty: "normal"
@@ -90,7 +90,7 @@ this module over the existing `*-graph` objects is an ownership migration,
 not a harmless side-by-side install. Timoni can adopt existing resources;
 do not allow that implicitly in the shared demo.
 
-For a company pilot, choose one owner for each graph package, review
+For a graph release, choose one owner for each package, review
 compatibility of the generated CRD schema and all existing instances, and
 plan resource adoption explicitly. Keep graph names, API identities and
 resource IDs stable. Removing a graph from a release can trigger pruning and
@@ -103,7 +103,7 @@ API. If a Bundle composes them, account explicitly for dependency/readiness
 ordering and the effects of bundle-wide removal. Do not create duplicate
 ownership of RGDs, generated CRDs, or kro-managed children.
 
-## Add Flux second
+## Flux delivery models
 
 Two distinct Flux uses are worth separating:
 

@@ -19,12 +19,12 @@ this checkout's existing `timoni/krombat` module.
 
 ## Two different inputs
 
-At **module build time**, the platform team may set the Timoni value
-`apiDefaultReplicas`. CUE validates it and writes it into the RGD as the
+At **module build time**, the Timoni value `apiDefaultReplicas` configures
+the API default. CUE validates it and writes it into the RGD as the
 WebApp API's default. This value applies when a new WebApp omits the field.
 
-At **runtime**, an application team can create a WebApp with an explicit
-`spec.replicas`. kro evaluates the CEL expression against that instance.
+At **runtime**, a WebApp instance can supply an explicit `spec.replicas`.
+kro evaluates the CEL expression against that instance.
 For the illustrated [webapp.yaml](webapp.yaml), kro is expected to reconcile
 a Deployment named `demo` with three replicas. This runtime result has not
 been verified on a cluster.

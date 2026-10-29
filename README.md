@@ -107,12 +107,12 @@ performing kro's inventory cleanup.
 
 See [the presentation walkthrough](Docs/demo/DEMO.md) for Radar/k9s commands and
 a repeatable scenario, and [the runbook](Docs/runbook.md) for troubleshooting.
-For a self-paced workshop on kro concepts and small-company platform design,
+For a self-paced workshop on kro concepts and platform API design,
 see [Docs/workshop](Docs/workshop/README.md).
 For authoring these same kro RGDs in CUE and packaging them with Timoni
 without Helm, see [Docs/timoni](Docs/timoni/README.md). The companion module
 preserves kro graph execution and is validated offline only.
-For a 10-minute introduction to CUE, Timoni, Kustomize and Flux, see the
+For a 15-minute introduction to CUE, Timoni, Kustomize and Flux, see the
 [presentation and speaker notes](Docs/presentation/README.md).
 
 ## Layout

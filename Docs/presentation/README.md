@@ -1,10 +1,10 @@
 # Timoni and CUE: constraints, composition and Kubernetes
 
-A **10-minute talk** for platform engineers and developers familiar with
-Kubernetes, YAML and Flux/Kustomize. It assumes a computer-science
-background, but no prior knowledge of CUE, Timoni or kro.
+A **15-minute technical introduction** to CUE, Timoni, Kustomize and Flux.
+It assumes familiarity with Kubernetes, YAML and basic computer-science
+concepts, with no prior knowledge of CUE, Timoni or kro.
 
-- [Slides (PDF)](krombat.pdf): nine widescreen slides using diatypst.
+- [Slides (PDF)](krombat.pdf): twelve widescreen slides using diatypst.
 - [Speaker notes (PDF)](speaker-notes.pdf): timed, one page per slide.
 - [Editable Typst source](krombat.typ).
 - Offline examples: [Deployment](example/README.md),
@@ -12,30 +12,36 @@ background, but no prior knowledge of CUE, Timoni or kro.
   [WebApp RGD](example-rgd/README.md) and
   [Bicep/Flux runtime-input handoff](example-runtime/README.md).
 - [Technical sources](SOURCES.md), [optional registry material](REGISTRY.md)
-  and [project review / revision evidence](REVIEW.md).
+  and [validation evidence](REVIEW.md).
 
 The talk introduces CUE's data-and-constraints model, connects unification
 to intersection, and compares that with Kustomize's object transformations.
 It then shows what Timoni adds and uses a kro WebApp API as a compact
-application. It also examines the team's Bicep/CI → ConfigMaps/Secrets →
-Flux flow and where concrete infrastructure values can be validated.
+application. An expanded Runtime walkthrough follows external values
+from ConfigMap/Secret queries to named inputs, typed Bundle contracts
+and offline validation. The Bicep/CI → ConfigMaps/Secrets → Flux pattern
+illustrates where infrastructure values cross the consumer boundary.
 
 ## Running order
 
 | Slide | Time | Topic |
 |---|---|---|
-| 1 | 00:00–00:40 | CUE/Timoni, Kustomize and Flux responsibilities |
-| 2 | 00:40–01:20 | Marcel van Lohuizen: Borg, BCL/GCL and CUE |
-| 3 | 01:20–02:40 | Types, constraints, values and defaults |
-| 4 | 02:40–03:50 | Reusable definitions and unification |
-| 5 | 03:50–05:00 | Kustomize transformations versus CUE constraints |
-| 6 | 05:00–06:10 | Timoni modules, schemas, build and packaging |
-| 7 | 06:10–07:30 | Shared CUE structure for a kro API |
-| 8 | 07:30–09:00 | Bicep values and a typed Timoni Bundle input contract |
-| 9 | 09:00–10:00 | Benefits, costs and follow-up examples |
+| 1 | 00:00–00:45 | CUE/Timoni, Kustomize and Flux responsibilities |
+| 2 | 00:45–01:30 | Marcel van Lohuizen: Borg, BCL/GCL and CUE |
+| 3 | 01:30–03:00 | Types, constraints, values and defaults |
+| 4 | 03:00–04:30 | Reusable definitions and unification |
+| 5 | 04:30–06:00 | Kustomize transformations versus CUE constraints |
+| 6 | 06:00–07:15 | Timoni modules, schemas, build and packaging |
+| 7 | 07:15–08:45 | Shared CUE structure for a kro API |
+| 8 | 08:45–09:45 | External values and Flux substitution |
+| 9 | 09:45–11:15 | Runtime resource queries and field mappings |
+| 10 | 11:15–13:00 | Runtime bindings and a reusable Bundle input contract |
+| 11 | 13:00–14:15 | Offline checks and execution boundaries |
+| 12 | 14:15–15:00 | Tool capabilities and operating requirements |
 
-The speaking plan totals 600 seconds. Questions follow the talk.
-The source asserts both the nine-slide count and the timing total.
+The speaking plan totals 900 seconds. Questions follow the talk.
+The source asserts the twelve-slide count, timing total and physical PDF
+page counts.
 
 ## Presenter guidance
 
@@ -58,20 +64,22 @@ expressions. kro evaluates those expressions for instances later. The
 RGD is cluster-scoped; WebApp instances and their Deployments are
 namespaced. The CUE and YAML panels are explicitly shortened excerpts.
 
-On slide 8, follow the described Bicep/CI → ConfigMaps/Secrets → Flux
-handoff. The object names are illustrative. Flux can resolve values after
-rendering; earlier CUE checks of placeholders cannot validate those
-concrete values.
-Validation must receive concrete inputs at the producer or consumer
-boundary. Timoni Runtime can read cluster objects into typed Bundle
-inputs. The excerpt separates Runtime bindings (`_replicas`, `_token`)
-from the consumer constraints: an integer from 1 to 10 and a nonempty
-string. Bundle metadata and the module reference are omitted; the
-complete example factors the same constraints into `#InfraValues`.
-This is an explicitly invoked CLI workflow. Flux does not
-automatically run it; an additional render step needs its own trigger
-when the inputs change. The [handoff example](example-runtime/README.md)
-demonstrates the runtime contract offline and explains preservation of
+Slides 8–11 follow a value across the infrastructure boundary:
+
+1. Flux resolves ConfigMap/Secret values after the Kustomize build.
+2. Runtime queries select resources and map their fields to named inputs.
+3. Bundle attributes bind those inputs; `#InfraValues` constrains the
+   consumed values to an integer from 1 to 10 and a nonempty string.
+4. Offline checks distinguish parsing, type, range and required-value
+   failures, then separate CLI execution from continuous reconciliation.
+
+The query excerpt omits Runtime metadata and cluster selection; the
+Bundle excerpt omits metadata, the module reference and namespace. The
+[complete example](example-runtime/README.md) includes these fields.
+Runtime is explicitly invoked. Flux does not automatically run it;
+changes to source values need a trigger for another execution. Validation
+must receive concrete inputs, since checking a placeholder cannot validate
+a later substitution. The handoff guide also explains preservation of
 kro CEL expressions through Flux substitution.
 
 No production integration is implemented here. API readiness must precede

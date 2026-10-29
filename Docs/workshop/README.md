@@ -1,4 +1,4 @@
-# kro for a small platform team
+# kro: APIs, resource composition and reconciliation
 
 A self-paced workshop using the local Krombat demo to explore kro as a
 Kubernetes platform-engineering tool. The game is a concrete resource graph to
@@ -15,8 +15,8 @@ By completing the modules, you should be able to:
   and status projections in an RGD.
 - Recognize composition, collection expansion, conditional resources,
   derived status, and reconciliation in a working example.
-- Evaluate where these patterns help a small platform team and where they add
-  operational or organizational cost.
+- Compare resource-composition patterns, their operational requirements
+  and the abstractions they introduce.
 - Describe what the game does **not** demonstrate, without mistaking a demo
   architecture for a production recommendation.
 
@@ -54,7 +54,7 @@ desired game state.
 |---|---|---|
 | [01 - Observe the graph](exercises/01-observe-the-graph.md) | API, composition, reconciliation and lifecycle | Annotated map of one Dungeon and its composed resources |
 | [02 - Read RGDs and CEL](exercises/02-read-rgds-and-cel.md) | Schema, templates, `forEach`, `includeWhen`, readiness, status and expressions | Answers grounded in the current RGD YAML and CEL playground |
-| [03 - Platform design review](exercises/03-platform-design-review.md) | Small-company fit, boundaries, operations and alternatives | Short recommendation with assumptions, benefits and risks |
+| [03 - Platform design review](exercises/03-platform-design-review.md) | API boundaries, operations and alternatives | Technical comparison with assumptions, capabilities and costs |
 
 Self-checks are in [reference answers](solutions/answers.md). Try each module
 before opening them.
