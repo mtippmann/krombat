@@ -33,7 +33,7 @@ The [YAML-to-CUE walkthrough](rgd-mapping.md) shows the Monster graph,
 its shared helpers and its generated YAML. It explains exactly what is
 evaluated by CUE now and what remains for kro later.
 
-Run from the repository root with Timoni 0.34.0:
+Run from the repository root with Timoni 0.35.0:
 
 ```bash
 timoni build krombat-graphs ./timoni/krombat --namespace rpg-system

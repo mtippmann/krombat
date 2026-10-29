@@ -112,6 +112,8 @@ see [Docs/workshop](Docs/workshop/README.md).
 For authoring these same kro RGDs in CUE and packaging them with Timoni
 without Helm, see [Docs/timoni](Docs/timoni/README.md). The companion module
 preserves kro graph execution and is validated offline only.
+For a 10-minute introduction to CUE, Timoni, Kustomize and Flux, see the
+[presentation and speaker notes](Docs/presentation/README.md).
 
 ## Layout
 

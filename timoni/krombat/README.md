@@ -12,7 +12,7 @@ then read the [walkthrough](../../Docs/timoni/rgd-mapping.md).
 
 ## Offline commands
 
-Use Timoni 0.34.0, which embeds CUE 0.17.1. From the repository root:
+Use Timoni 0.35.0, which embeds CUE 0.17.1. From the repository root:
 
 ```bash
 timoni fmt --diff timoni/krombat

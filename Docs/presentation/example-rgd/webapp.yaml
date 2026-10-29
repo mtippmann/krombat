@@ -1,0 +1,8 @@
+# Example of an instance after the WebApp API has been installed by kro.
+apiVersion: platform.example/v1alpha1
+kind: WebApp
+metadata:
+  name: demo
+  namespace: demo
+spec:
+  replicas: 3
