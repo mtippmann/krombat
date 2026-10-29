@@ -40,6 +40,12 @@ and a Secret query for `DEMO_TOKEN`. [bundle.cue](bundle.cue) binds runtime
 inputs to separate fields, then unifies the consumed values with
 `#InfraValues`: an integer from 1 to 10 and a nonempty string.
 
+Slide 8's [CUE excerpt](../krombat.typ) writes those constraints directly
+on the consuming `values` fields. `_replicas` and `_token` hold Runtime
+inputs; `&` combines each with its consumer contract. The excerpt omits
+Bundle metadata, the module reference and namespace. The complete file
+above includes them and reuses the named `#InfraValues` contract.
+
 From this directory:
 
 ```bash

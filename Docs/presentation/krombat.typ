@@ -337,25 +337,21 @@
       #panel("Existing infrastructure handoff", [
         #callout[#align(center)[Bicep / CI → ConfigMaps / Secrets → Flux → Kubernetes]]
       ])
-      #v(12pt)
-      #pair(
-        panel("Flux Kustomization · excerpt", [
-          ```yaml
-          postBuild:
-            substituteFrom:
-            - kind: ConfigMap
-              name: infra-values
-            - kind: Secret
-              name: infra-secrets
-          ```
-        ]),
-        panel("Where CUE can help", [
-          - Validate outputs before publishing values.
-          - Or: Timoni Runtime reads cluster values into typed Bundle inputs.
-        ]),
-      )
       #v(10pt)
-      #text(size: 14pt)[CUE must receive the values that Flux will substitute.]
+      #panel("Timoni Runtime → typed Bundle inputs · excerpt (separate CLI step)", [
+        ```cue
+        bundle: {
+          _replicas: int    @timoni(runtime:number:DEMO_REPLICAS)
+          _token:    string @timoni(runtime:string:DEMO_TOKEN)
+          instances: web: values: {
+            replicas: int & >=1 & <=10 & _replicas
+            token:    string & !="" & _token
+          }
+        }
+        ```
+      ])
+      #v(8pt)
+      #text(size: 14pt)[`"3"` → integer `3`; `0`, `"three"` or an empty token → *error*.]
     ],
     refs: (
       source("https://fluxcd.io/flux/components/kustomize/kustomizations/#post-build-variable-substitution", "Flux substitution"),
@@ -363,26 +359,27 @@
       source("example-runtime/README.md", "Offline handoff example"),
     ),
     notes: [
-      This is the infrastructure handoff described by the team: Bicep or CI
-      creates ConfigMaps and Secrets, and Flux reads those values. The object
-      names shown are illustrative. Flux's substituteFrom loads values for
-      substitution after Kustomize has built the manifests, during reconciliation.
+      Start with the team's handoff: Bicep or CI publishes ConfigMaps and Secrets;
+      Flux's substituteFrom reads their values after Kustomize builds. The code
+      outlines a separate consumer validation step.
 
-      The important question is when values become concrete. CUE can check
-      required fields, types and relationships once it receives actual values.
-      Validating a placeholder in CI does not validate the value Flux inserts
-      later. Bicep also has typed outputs; the additional contract belongs at
-      the boundary to the Kubernetes consumer.
+      A Bundle groups module instances. Runtime maps ConfigMap replicas to
+      DEMO_REPLICAS and Secret token to DEMO_TOKEN. Attributes parse a number and
+      a string into hidden fields. The consuming values then unify these inputs
+      with an integer range, one to ten, and a nonempty-string contract. Keep the
+      constraints at the consuming fields, separate from injection. The complete
+      example factors them into `#InfraValues`; Bundle metadata, module reference
+      and namespace are omitted here.
 
-      There are two possible additions. Keep Flux and validate producer outputs
-      before publishing them, or validate the resolved consumer input. Alternatively,
-      Timoni Runtime can read existing cluster objects into typed inputs for a
-      Bundle, which groups module instances. That is a CLI workflow, not something
-      Flux automatically invokes. An added render step also needs a trigger when
-      its input values change. The offline example checks synthetic runtime
-      inputs and rejects invalid or missing values. It does not fetch real objects
-      or demonstrate production integration. Trace the handoff before choosing
-      where validation belongs.
+      Trace one input: ConfigMap string three becomes integer three. Zero, a
+      fraction, nonnumeric input or an empty or missing token fails validation.
+      CUE needs concrete values: checking a placeholder cannot validate a later
+      Flux substitution. Bicep's typed outputs do not carry this consumer contract.
+
+      Timoni Runtime is an explicitly invoked CLI step. Flux does not run it
+      automatically; input changes need to trigger it again. Keeping Flux and
+      validating producer outputs before publishing is another option. The linked
+      example checks synthetic inputs offline.
     ],
   ),
   (

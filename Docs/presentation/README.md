@@ -31,7 +31,7 @@ Flux flow and where concrete infrastructure values can be validated.
 | 5 | 03:50–05:00 | Kustomize transformations versus CUE constraints |
 | 6 | 05:00–06:10 | Timoni modules, schemas, build and packaging |
 | 7 | 06:10–07:30 | Shared CUE structure for a kro API |
-| 8 | 07:30–09:00 | Bicep values, Flux substitution and the validation boundary |
+| 8 | 07:30–09:00 | Bicep values and a typed Timoni Bundle input contract |
 | 9 | 09:00–10:00 | Benefits, costs and follow-up examples |
 
 The speaking plan totals 600 seconds. Questions follow the talk.
@@ -64,7 +64,11 @@ rendering; earlier CUE checks of placeholders cannot validate those
 concrete values.
 Validation must receive concrete inputs at the producer or consumer
 boundary. Timoni Runtime can read cluster objects into typed Bundle
-inputs, but that is an explicitly invoked CLI workflow. Flux does not
+inputs. The excerpt separates Runtime bindings (`_replicas`, `_token`)
+from the consumer constraints: an integer from 1 to 10 and a nonempty
+string. Bundle metadata and the module reference are omitted; the
+complete example factors the same constraints into `#InfraValues`.
+This is an explicitly invoked CLI workflow. Flux does not
 automatically run it; an additional render step needs its own trigger
 when the inputs change. The [handoff example](example-runtime/README.md)
 demonstrates the runtime contract offline and explains preservation of

@@ -294,3 +294,25 @@ Validation for this update:
 No Docker, Kubernetes or Azure operations were performed. The font files
 were obtained or copied for reproducible local builds; no artifact was
 published and no remote repository was modified.
+
+## Follow-up: show the typed Bundle input
+
+Updated on 2026-10-29. Slide 8 now shows a compact CUE Bundle excerpt
+instead of the Flux YAML and validation bullets. Runtime attributes bind
+the number and string inputs to hidden fields; consuming `values` fields
+unify them with the 1–10 integer range and nonempty-token contract. The
+existing Bicep/CI → ConfigMaps/Secrets → Flux handoff remains visible,
+and the Runtime example is labeled as a separate CLI step. The notes
+and handoff guide explain the omitted metadata and the equivalent named
+contract in the complete example.
+
+Validation for this update:
+
+- All eight offline input checks pass for both the displayed CUE excerpt
+  (with only omitted metadata restored) and the complete Bundle: valid,
+  below/above range, fractional, nonnumeric, missing number/token and
+  empty token. No Kubernetes API or registry was contacted.
+- Both PDFs compile, remain nine pages, and retain the 600-second plan.
+  Slide 8 and its notes were visually inspected. Fira fonts, blue styling
+  and the existing font sizes are unchanged.
+- Local presentation links resolve and Git whitespace checks pass.
